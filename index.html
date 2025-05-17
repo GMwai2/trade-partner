@@ -33,6 +33,7 @@
       padding-left: 20px;
     }
     #dashboard { display: none; }
+    .wallet-id { font-weight: bold; color: #555; }
   </style>
 </head>
 <body>
@@ -51,8 +52,15 @@
   <div id="dashboard">
     <div class="section">
       <h3>Welcome, <span id="userDisplay"></span></h3>
+      <p class="wallet-id">Wallet ID: <span id="walletId"></span></p>
       <h4>Your Wallet</h4>
       <ul id="walletList"></ul>
+    </div>
+
+    <div class="section">
+      <h3>Transaction History</h3>
+      <ul id="transactionHistory"></ul>
+      <button onclick="generateStatement()">Generate Statement</button>
     </div>
 
     <div class="section">
@@ -78,37 +86,34 @@
 
   <script>
     const users = {
-      admin: {
-        password: "admin123",
-        email: "mdgakuo3@gmail.com",
-        name: "System Admin",
-        walletId: "ADM001",
-        balances: { KES: 0, USD: 0, BTC: 0, ETH: 0, JPY: 0 },
-        isAdmin: true
-      },
       kilush: {
         password: "kilush123",
-        email: "",
         name: "Kilush",
-        walletId: "KIL001",
-        balances: { KES: 1000, USD: 0, BTC: 0, ETH: 0, JPY: 0 },
-        isAdmin: false
+        walletId: "KLS001",
+        balances: { KES: 1000, BTC: 0, ETH: 0, USD: 0, JPY: 0 },
+        history: []
       },
       schwadz: {
         password: "schwadz123",
-        email: "mdgakuo2@gmail.com",
         name: "Schwadz",
-        walletId: "SCH001",
-        balances: { USD: 6.45, KES: 0, BTC: 0, ETH: 0, JPY: 0 },
-        isAdmin: false
+        walletId: "SWZ001",
+        balances: { KES: 0, BTC: 0.0001, ETH: 0.05, USD: 6.4, JPY: 1230 },
+        history: []
       },
       moses: {
         password: "moses123",
-        email: "moses@example.com",
         name: "Moses",
         walletId: "MOS001",
-        balances: { JPY: 1300, KES: 0, BTC: 0, ETH: 0, USD: 0 },
-        isAdmin: false
+        balances: { KES: 0, BTC: 0.0001, ETH: 0.05, USD: 6.4, JPY: 1230 },
+        history: []
+      },
+      admin: {
+        password: "admin123",
+        name: "Admin",
+        walletId: "ADM001",
+        balances: { KES: 0, BTC: 0, ETH: 0, USD: 0, JPY: 0 },
+        feesWallet: { KES: 0, BTC: 0, ETH: 0, USD: 0, JPY: 0 },
+        history: []
       }
     };
 
@@ -123,15 +128,17 @@
     let currentUser = null;
 
     function login() {
-      const uname = document.getElementById("username").value.toLowerCase();
+      const uname = document.getElementById("username").value;
       const pwd = document.getElementById("password").value;
       if (users[uname] && users[uname].password === pwd) {
         currentUser = uname;
         document.getElementById("login").style.display = "none";
         document.getElementById("dashboard").style.display = "block";
         document.getElementById("userDisplay").innerText = users[uname].name;
+        document.getElementById("walletId").innerText = users[uname].walletId;
         populateCurrencySelects();
         updateWalletDisplay();
+        updateTransactionHistory();
         document.getElementById("loginStatus").innerText = "";
       } else {
         document.getElementById("loginStatus").innerText = "Invalid credentials.";
@@ -162,6 +169,29 @@
       for (let [currency, amount] of Object.entries(wallet)) {
         list.innerHTML += `<li><strong>${currency}</strong>: ${amount.toFixed(2)}</li>`;
       }
+      if (currentUser === "admin") {
+        list.innerHTML += `<h4>Transaction Fees Wallet</h4>`;
+        for (let [currency, amount] of Object.entries(users.admin.feesWallet)) {
+          list.innerHTML += `<li><strong>${currency}</strong>: ${amount.toFixed(2)}</li>`;
+        }
+      }
+    }
+
+    function updateTransactionHistory() {
+      const historyList = document.getElementById("transactionHistory");
+      const history = users[currentUser].history || [];
+      historyList.innerHTML = "";
+      if (history.length === 0) {
+        historyList.innerHTML = "<li>No transactions yet.</li>";
+      } else {
+        history.forEach(h => {
+          historyList.innerHTML += `<li>${h}</li>`;
+        });
+      }
+    }
+
+    function generateStatement() {
+      alert("Statement downloaded (demo only).");
     }
 
     function sendMoney() {
@@ -202,19 +232,27 @@
         return;
       }
 
-      let fee = 0;
-      if (from === "KES" && amount > 250) fee = amount * 0.01;
+      let charge = 0;
+      if (from === "KES" && amount > 250) {
+        charge = amount * 0.01;
+      }
 
-      const converted = (amount - fee) * exchangeRates[from][to];
+      const converted = (amount - charge) * exchangeRates[from][to];
 
       users[currentUser].balances[from] -= amount;
       users[found].balances[to] += converted;
 
-      // Credit admin fees
-      users["admin"].balances[from] += fee;
+      if (charge > 0) users.admin.feesWallet[from] += charge;
+
+      const msg = `Sent ${amount} ${from} to ${recipientName} = ${converted.toFixed(2)} ${to} (charge: ${charge.toFixed(2)} ${from})`;
+      users[currentUser].history.push(msg);
+      users[found].history.push(`Received ${converted.toFixed(2)} ${to} from ${users[currentUser].name}`);
+      users.admin.history.push(msg);
 
       updateWalletDisplay();
-      status.innerText = `Sent ${amount} ${from} to ${recipientName}. Converted: ${converted.toFixed(2)} ${to}, Fee: ${fee.toFixed(2)} ${from}`;
+      updateTransactionHistory();
+
+      status.innerText = `Success! ${msg}`;
       document.getElementById("sendAmount").value = "";
     }
   </script>
