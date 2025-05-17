@@ -78,17 +78,41 @@
 
   <script>
     const users = {
-      alice: {
+      Alice: {
         password: "1234",
         name: "Alice Njeri",
         walletId: "ALC001",
         balances: { KES: 1000, BTC: 0.02, USD: 0, JPY: 0, ETH: 0 }
       },
-      bob: {
+      Bob: {
         password: "5678",
         name: "Bob Watanabe",
         walletId: "BOB001",
         balances: { JPY: 5000, ETH: 1.5, USD: 0, BTC: 0, KES: 0 }
+      },
+      Kilush: {
+        password: "kilush123",
+        name: "Kilush",
+        walletId: "KLS001",
+        balances: { KES: 1000, USD: 0, JPY: 0, BTC: 0, ETH: 0 }
+      },
+      Schwadz: {
+        password: "schwadz123",
+        name: "Schwadz",
+        walletId: "SWZ001",
+        balances: { USD: 6.4, KES: 0, JPY: 0, BTC: 0, ETH: 0 }
+      },
+      Moses: {
+        password: "moses123",
+        name: "Moses",
+        walletId: "MS001",
+        balances: { JPY: 1333, USD: 0, KES: 0, BTC: 0, ETH: 0 }
+      },
+      Admin: {
+        password: "admin123",
+        name: "System Admin",
+        walletId: "ADMIN001",
+        balances: { KES: 0, USD: 0, JPY: 0, BTC: 0, ETH: 0 }
       }
     };
 
@@ -102,24 +126,25 @@
 
     let currentUser = null;
 
-    function capitalizeName(name) {
-      return name.charAt(0).toUpperCase() + name.slice(1);
-    }
-
     function login() {
-      const uname = document.getElementById("username").value;
+      const uname = capitalizeFirstLetter(document.getElementById("username").value);
       const pwd = document.getElementById("password").value;
       if (users[uname] && users[uname].password === pwd) {
         currentUser = uname;
         document.getElementById("login").style.display = "none";
         document.getElementById("dashboard").style.display = "block";
-        document.getElementById("userDisplay").innerText = capitalizeName(users[uname].name);
+        document.getElementById("userDisplay").innerText = users[uname].name;
         populateCurrencySelects();
         updateWalletDisplay();
         document.getElementById("loginStatus").innerText = "";
       } else {
         document.getElementById("loginStatus").innerText = "Invalid credentials.";
       }
+    }
+
+    function capitalizeFirstLetter(str) {
+      if (!str) return "";
+      return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
     }
 
     function logout() {
