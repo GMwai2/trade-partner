@@ -14,7 +14,7 @@
       border-radius: 10px;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     }
-    h2, h3, h4 {
+    h2, h3 {
       text-align: center;
     }
     label, select, input, button {
@@ -32,7 +32,7 @@
     ul {
       padding-left: 20px;
     }
-    #dashboard, #adminPanel { display: none; }
+    #dashboard, #adminDashboard { display: none; }
   </style>
 </head>
 <body>
@@ -76,35 +76,38 @@
     </div>
   </div>
 
-  <div id="adminPanel" class="section">
+  <div id="adminDashboard" class="section">
     <h3>Admin Dashboard</h3>
-    <h4>All Balances</h4>
-    <ul id="allBalances"></ul>
-    <h4>Transaction Charges Wallet</h4>
-    <p id="chargesWallet"></p>
+    <p><strong>Admin Wallet:</strong></p>
+    <ul id="adminWallet"></ul>
+
+    <p><strong>Transaction Charges Wallet:</strong></p>
+    <ul id="chargesWallet"></ul>
+
     <button onclick="logout()">Logout</button>
   </div>
 
   <script>
     const users = {
-      alice: {
-        password: "1234",
-        name: "Alice Njeri",
-        walletId: "ALC001",
-        balances: { KES: 1000, BTC: 0.02, USD: 0, JPY: 0, ETH: 0 }
-      },
-      bob: {
-        password: "5678",
-        name: "Bob Watanabe",
-        walletId: "BOB001",
-        balances: { JPY: 5000, ETH: 1.5, USD: 0, BTC: 0, KES: 0 }
-      },
       admin: {
-        password: "adminpass",
+        password: "admin123",
         name: "System Admin",
         walletId: "ADM001",
-        balances: { KES: 0, BTC: 0, USD: 0, JPY: 0, ETH: 0 },
-        charges: { KES: 0, BTC: 0, USD: 0, JPY: 0, ETH: 0 }
+        isAdmin: true,
+        balances: { KES: 0, BTC: 0, ETH: 0, USD: 0, JPY: 0 },
+        charges: { KES: 0, BTC: 0, ETH: 0, USD: 0, JPY: 0 }
+      },
+      kilush: {
+        password: "kilushpass",
+        name: "Kilush",
+        walletId: "KIL001",
+        balances: { KES: 1000, BTC: 0, ETH: 0, USD: 0, JPY: 0 }
+      },
+      schwadz: {
+        password: "schwadzpass",
+        name: "Schwadz",
+        walletId: "SCH001",
+        balances: { USD: 6.4, BTC: 0, ETH: 0, KES: 0, JPY: 0 }
       }
     };
 
@@ -119,14 +122,15 @@
     let currentUser = null;
 
     function login() {
-      const uname = document.getElementById("username").value;
+      const uname = document.getElementById("username").value.toLowerCase();
       const pwd = document.getElementById("password").value;
       if (users[uname] && users[uname].password === pwd) {
         currentUser = uname;
         document.getElementById("login").style.display = "none";
-        if (uname === 'admin') {
-          document.getElementById("adminPanel").style.display = "block";
-          showAdminPanel();
+
+        if (users[uname].isAdmin) {
+          document.getElementById("adminDashboard").style.display = "block";
+          updateAdminDisplay();
         } else {
           document.getElementById("dashboard").style.display = "block";
           document.getElementById("userDisplay").innerText = users[uname].name;
@@ -143,7 +147,7 @@
       currentUser = null;
       document.getElementById("login").style.display = "block";
       document.getElementById("dashboard").style.display = "none";
-      document.getElementById("adminPanel").style.display = "none";
+      document.getElementById("adminDashboard").style.display = "none";
     }
 
     function populateCurrencySelects() {
@@ -163,6 +167,23 @@
       list.innerHTML = "";
       for (let [currency, amount] of Object.entries(wallet)) {
         list.innerHTML += `<li><strong>${currency}</strong>: ${amount.toFixed(2)}</li>`;
+      }
+    }
+
+    function updateAdminDisplay() {
+      const admin = users[currentUser];
+      const wallet = admin.balances;
+      const charges = admin.charges;
+
+      const list1 = document.getElementById("adminWallet");
+      const list2 = document.getElementById("chargesWallet");
+      list1.innerHTML = list2.innerHTML = "";
+
+      for (let [currency, amount] of Object.entries(wallet)) {
+        list1.innerHTML += `<li>${currency}: ${amount.toFixed(2)}</li>`;
+      }
+      for (let [currency, amount] of Object.entries(charges)) {
+        list2.innerHTML += `<li>${currency}: ${amount.toFixed(2)}</li>`;
       }
     }
 
@@ -204,38 +225,23 @@
         return;
       }
 
-      const converted = amount * exchangeRates[from][to];
+      let fee = 0;
+      if (from === "KES" && amount > 250) {
+        fee = amount * 0.01;
+      }
+
+      const finalAmount = amount - fee;
+      const converted = finalAmount * exchangeRates[from][to];
       users[currentUser].balances[from] -= amount;
       users[found].balances[to] += converted;
 
-      // Transaction fee for KES if over 250
-      if (from === "KES" && amount > 250) {
-        const fee = amount * 0.01;
-        users[currentUser].balances[from] -= fee;
-        users["admin"].charges["KES"] += fee;
+      if (fee > 0 && users.admin) {
+        users.admin.charges[from] += fee;
       }
 
       updateWalletDisplay();
-      status.innerText = `Success! Sent ${amount} ${from} = ${converted.toFixed(2)} ${to} to ${recipientName}`;
+      status.innerText = `Success! Sent ${finalAmount.toFixed(2)} ${from} = ${converted.toFixed(2)} ${to} to ${recipientName}. Fee: ${fee.toFixed(2)} ${from}`;
       document.getElementById("sendAmount").value = "";
-    }
-
-    function showAdminPanel() {
-      const balancesList = document.getElementById("allBalances");
-      balancesList.innerHTML = "";
-      for (let [uname, data] of Object.entries(users)) {
-        if (uname !== "admin") {
-          for (let [cur, amt] of Object.entries(data.balances)) {
-            balancesList.innerHTML += `<li><strong>${uname} - ${cur}</strong>: ${amt.toFixed(2)}</li>`;
-          }
-        }
-      }
-      const chargeData = users["admin"].charges;
-      let summary = "";
-      for (let [cur, amt] of Object.entries(chargeData)) {
-        summary += `${cur}: ${amt.toFixed(2)}\n`;
-      }
-      document.getElementById("chargesWallet").innerText = summary;
     }
   </script>
 </body>
