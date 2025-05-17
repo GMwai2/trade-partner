@@ -7,7 +7,7 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 800px;
+      max-width: 600px;
       margin: 40px auto;
       padding: 20px;
       background-color: #f2f4f8;
@@ -17,7 +17,7 @@
     h2, h3 {
       text-align: center;
     }
-    label, select, input, button, textarea {
+    label, select, input, button {
       width: 100%;
       margin: 10px 0;
       padding: 10px;
@@ -32,7 +32,7 @@
     ul {
       padding-left: 20px;
     }
-    #dashboard, #adminDashboard { display: none; }
+    #dashboard { display: none; }
   </style>
 </head>
 <body>
@@ -51,18 +51,8 @@
   <div id="dashboard">
     <div class="section">
       <h3>Welcome, <span id="userDisplay"></span></h3>
-      <p><strong>Wallet ID:</strong> <span id="walletIdDisplay"></span></p>
-      <h4>Your Wallet Balances</h4>
+      <h4>Your Wallet</h4>
       <ul id="walletList"></ul>
-      <h4>Your Profile</h4>
-      <p><strong>Email:</strong> <span id="emailDisplay"></span></p>
-      <p><strong>Address:</strong> <span id="addressDisplay"></span></p>
-    </div>
-
-    <div class="section">
-      <h3>Transaction History</h3>
-      <ul id="transactionHistory"></ul>
-      <button onclick="downloadCSV()">Download Statement (CSV)</button>
     </div>
 
     <div class="section">
@@ -71,17 +61,12 @@
       <input type="text" id="receiverName" placeholder="Full legal name">
       <label for="receiverWallet">Recipient Wallet Number:</label>
       <input type="text" id="receiverWallet" placeholder="Wallet ID">
-      <label for="verifyBtn">Verify Recipient:</label>
-      <button onclick="verifyRecipient()">Verify</button>
-      <p id="verifyStatus"></p>
       <label for="fromCurrency">From Currency:</label>
       <select id="fromCurrency"></select>
       <label for="toCurrency">To Currency:</label>
       <select id="toCurrency"></select>
       <label for="sendAmount">Amount to Send:</label>
       <input type="number" id="sendAmount" placeholder="Enter amount">
-      <label for="pin">Authorization PIN:</label>
-      <input type="password" id="pin" placeholder="4-digit PIN">
       <button onclick="sendMoney()">Send</button>
       <p id="sendStatus"></p>
     </div>
@@ -93,66 +78,47 @@
 
   <script>
     const users = {
-      kilush: {
-        password: "password1",
-        name: "Kilush",
-        walletId: "KLS001",
-        email: "",
-        address: "",
-        pin: "1234",
-        balances: { KES: 1000, USD: 0, BTC: 0, ETH: 0 },
-        transactions: []
+      alice: {
+        password: "1234",
+        name: "Alice Njeri",
+        walletId: "ALC001",
+        balances: { KES: 1000, BTC: 0.02, USD: 0, JPY: 0, ETH: 0 }
       },
-      schwadz: {
-        password: "password2",
-        name: "Schwadz",
-        walletId: "SWD002",
-        email: "mdgakuo2@gmail.com",
-        address: "",
-        pin: "1234",
-        balances: { USD: 6.4, KES: 0, BTC: 0, ETH: 0 },
-        transactions: []
-      },
-      admin: {
-        password: "adminpass",
-        name: "Admin",
-        walletId: "ADM999",
-        email: "mdgakuo3@gmail.com",
-        address: "HQ",
-        pin: "1234",
-        balances: { KES: 0, USD: 0, BTC: 0, ETH: 0 },
-        feesWallet: { KES: 0 },
-        transactions: []
+      bob: {
+        password: "5678",
+        name: "Bob Watanabe",
+        walletId: "BOB001",
+        balances: { JPY: 5000, ETH: 1.5, USD: 0, BTC: 0, KES: 0 }
       }
     };
 
     const exchangeRates = {
-      KES: { KES: 1, USD: 0.0064, BTC: 0.000002, ETH: 0.00003 },
-      USD: { KES: 155.3, USD: 1, BTC: 0.000015, ETH: 0.00024 },
-      BTC: { KES: 5200000, USD: 65000, BTC: 1, ETH: 15 },
-      ETH: { KES: 350000, USD: 4200, BTC: 0.066, ETH: 1 }
+      KES: { KES: 1, JPY: 1.23, BTC: 0.000002, ETH: 0.00003, USD: 0.0064 },
+      JPY: { KES: 0.81, JPY: 1, BTC: 0.0000015, ETH: 0.00002, USD: 0.0075 },
+      BTC: { KES: 5200000, JPY: 6700000, BTC: 1, ETH: 15, USD: 65000 },
+      ETH: { KES: 350000, JPY: 470000, BTC: 0.066, ETH: 1, USD: 4200 },
+      USD: { KES: 155.3, JPY: 133.3, BTC: 0.000015, ETH: 0.00024, USD: 1 }
     };
 
     let currentUser = null;
 
+    function capitalizeName(name) {
+      return name.charAt(0).toUpperCase() + name.slice(1);
+    }
+
     function login() {
       const uname = document.getElementById("username").value;
       const pwd = document.getElementById("password").value;
-      const status = document.getElementById("loginStatus");
       if (users[uname] && users[uname].password === pwd) {
         currentUser = uname;
-        status.innerText = "";
         document.getElementById("login").style.display = "none";
         document.getElementById("dashboard").style.display = "block";
-        document.getElementById("userDisplay").innerText = users[uname].name;
-        document.getElementById("walletIdDisplay").innerText = users[uname].walletId;
-        document.getElementById("emailDisplay").innerText = users[uname].email;
-        document.getElementById("addressDisplay").innerText = users[uname].address || "(not set)";
-        updateWalletDisplay();
+        document.getElementById("userDisplay").innerText = capitalizeName(users[uname].name);
         populateCurrencySelects();
-        updateTransactionHistory();
+        updateWalletDisplay();
+        document.getElementById("loginStatus").innerText = "";
       } else {
-        status.innerText = "Invalid credentials.";
+        document.getElementById("loginStatus").innerText = "Invalid credentials.";
       }
     }
 
@@ -182,67 +148,26 @@
       }
     }
 
-    function updateTransactionHistory() {
-      const history = users[currentUser].transactions || [];
-      const list = document.getElementById("transactionHistory");
-      list.innerHTML = history.map(t => `<li>${t}</li>`).join("");
-    }
-
-    function downloadCSV() {
-      const history = users[currentUser].transactions || [];
-      let csv = "Transaction History\n" + history.join("\n");
-      const blob = new Blob([csv], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${currentUser}_statement.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-
-    function verifyRecipient() {
-      const name = document.getElementById("receiverName").value.trim().toLowerCase();
-      const wallet = document.getElementById("receiverWallet").value.trim();
-      const result = document.getElementById("verifyStatus");
-      for (let [uname, user] of Object.entries(users)) {
-        if (user.name.toLowerCase() === name && user.walletId === wallet) {
-          result.innerText = "✅ Verified: " + user.name;
-          return;
-        }
-      }
-      result.innerText = "❌ Verification failed. Check name and wallet ID.";
-    }
-
     function sendMoney() {
       const from = document.getElementById("fromCurrency").value;
       const to = document.getElementById("toCurrency").value;
       const amount = parseFloat(document.getElementById("sendAmount").value);
-      const pin = document.getElementById("pin").value.trim();
       const recipientName = document.getElementById("receiverName").value.trim();
       const recipientWallet = document.getElementById("receiverWallet").value.trim();
       const status = document.getElementById("sendStatus");
 
-      if (!recipientName || !recipientWallet || pin.length !== 4) {
-        status.innerText = "Please fill all fields including PIN.";
+      if (!recipientName || !recipientWallet) {
+        status.innerText = "Please enter recipient's full legal name and wallet number.";
         return;
       }
-
-      if (pin !== users[currentUser].pin) {
-        status.innerText = "Invalid PIN.";
-        return;
-      }
-
       if (!amount || amount <= 0 || isNaN(amount)) {
-        status.innerText = "Enter a valid amount.";
+        status.innerText = "Please enter a valid amount.";
         return;
       }
-
       if (from === to) {
-        status.innerText = "Select different currencies.";
+        status.innerText = "Cannot convert to the same currency.";
         return;
       }
-
       if (users[currentUser].balances[from] < amount) {
         status.innerText = `Insufficient balance in ${from}.`;
         return;
@@ -257,27 +182,17 @@
       }
 
       if (!found) {
-        status.innerText = "Recipient not found or incorrect.";
+        status.innerText = "Recipient not found or details incorrect.";
         return;
       }
 
-      const fee = amount > 250 ? amount * 0.01 : 0;
-      const net = amount - fee;
-      const converted = net * exchangeRates[from][to];
+      const converted = amount * exchangeRates[from][to];
       users[currentUser].balances[from] -= amount;
       users[found].balances[to] += converted;
 
-      if (fee > 0) {
-        users.admin.feesWallet[from] = (users.admin.feesWallet[from] || 0) + fee;
-      }
-
-      const txNote = `Sent ${amount} ${from} (Fee: ${fee}) = ${converted.toFixed(2)} ${to} to ${recipientName}`;
-      users[currentUser].transactions.push(txNote);
-      users[found].transactions.push(`Received ${converted.toFixed(2)} ${to} from ${users[currentUser].name}`);
-
       updateWalletDisplay();
-      updateTransactionHistory();
-      status.innerText = `✅ ${txNote}`;
+      status.innerText = `Success! Sent ${amount} ${from} = ${converted.toFixed(2)} ${to} to ${recipientName}`;
+      document.getElementById("sendAmount").value = "";
     }
   </script>
 </body>
