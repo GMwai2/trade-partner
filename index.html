@@ -82,13 +82,25 @@
         password: "1234",
         name: "Alice Njeri",
         walletId: "ALC001",
-        balances: { KES: 1000, BTC: 0.02, USD: 0, JPY: 0, ETH: 0 }
+        balances: { KES: 1000, BTC: 0.02, USD: 50, JPY: 1000, ETH: 0.5 }
       },
       bob: {
         password: "5678",
         name: "Bob Watanabe",
         walletId: "BOB001",
-        balances: { JPY: 5000, ETH: 1.5, USD: 0, BTC: 0, KES: 0 }
+        balances: { JPY: 5000, ETH: 1.5, USD: 20, BTC: 0.01, KES: 0 }
+      },
+      carol: {
+        password: "abcd",
+        name: "Carol Oduor",
+        walletId: "CAR123",
+        balances: { USD: 100, KES: 2000, BTC: 0.005, ETH: 0.3, JPY: 3000 }
+      },
+      daniel: {
+        password: "efgh",
+        name: "Daniel Mutiso",
+        walletId: "DAN456",
+        balances: { ETH: 1, KES: 500, USD: 30, BTC: 0.002, JPY: 2000 }
       }
     };
 
@@ -114,7 +126,7 @@
         updateWalletDisplay();
         document.getElementById("loginStatus").innerText = "";
       } else {
-        document.getElementById("loginStatus").innerText = "Invalid credentials.";
+        document.getElementById("loginStatus").innerText = "Invalid credentials. Valid test users: alice, bob, carol, daniel.";
       }
     }
 
