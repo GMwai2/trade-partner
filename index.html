@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Trade Partner Wallet Demo</title>
+  <title>Trade Partner Wallet with Conversion</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 500px;
+      max-width: 600px;
       margin: 40px auto;
       padding: 20px;
-      background-color: #f0f8ff;
+      background-color: #f8f9fa;
       border-radius: 10px;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     }
-    h2 {
+    h2, h3 {
       text-align: center;
     }
     label, select, input, button {
@@ -22,30 +22,51 @@
       margin: 10px 0;
       padding: 10px;
     }
-    .wallet {
-      margin-top: 20px;
-      background: #fff;
+    .wallet, .conversion {
+      background: #ffffff;
       padding: 15px;
       border-radius: 8px;
+      margin-top: 20px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    ul {
+      padding-left: 20px;
     }
   </style>
 </head>
 <body>
-  <h2>Trade Partner Wallet (Demo)</h2>
+  <h2>Trade Partner Wallet (With Conversion)</h2>
 
-  <label for="currency">Choose Currency:</label>
-  <select id="currency">
-    <option value="KES">KES</option>
-    <option value="JPY">JPY</option>
-    <option value="BTC">BTC</option>
-    <option value="ETH">ETH</option>
-    <option value="USD">USD</option>
-  </select>
+  <div class="wallet">
+    <h3>Add Funds to Wallet</h3>
+    <label for="fundCurrency">Currency:</label>
+    <select id="fundCurrency">
+      <option value="KES">KES</option>
+      <option value="JPY">JPY</option>
+      <option value="BTC">BTC</option>
+      <option value="ETH">ETH</option>
+      <option value="USD">USD</option>
+    </select>
 
-  <label for="amount">Add Balance:</label>
-  <input type="number" id="amount" placeholder="Enter amount" />
-  <button onclick="addToWallet()">Add to Wallet</button>
+    <label for="fundAmount">Amount:</label>
+    <input type="number" id="fundAmount" placeholder="Enter amount" />
+    <button onclick="addFunds()">Add to Wallet</button>
+  </div>
+
+  <div class="conversion">
+    <h3>Send Money (with Conversion)</h3>
+    <label for="fromCurrency">From Currency:</label>
+    <select id="fromCurrency"></select>
+
+    <label for="toCurrency">To Currency:</label>
+    <select id="toCurrency"></select>
+
+    <label for="sendAmount">Amount to Send:</label>
+    <input type="number" id="sendAmount" placeholder="Enter amount" />
+    <button onclick="convertAndTransfer()">Convert & Send</button>
+
+    <p id="conversionResult"></p>
+  </div>
 
   <div class="wallet">
     <h3>Wallet Balances</h3>
@@ -61,15 +82,14 @@
       USD: 0
     };
 
-    function addToWallet() {
-      const currency = document.getElementById("currency").value;
-      const amount = parseFloat(document.getElementById("amount").value);
-      if (!isNaN(amount) && amount > 0) {
-        wallet[currency] += amount;
-        updateWalletDisplay();
-        document.getElementById("amount").value = "";
-      }
-    }
+    // Mock exchange rates
+    const exchangeRates = {
+      KES: { KES: 1, JPY: 1.23, BTC: 0.000002, ETH: 0.00003, USD: 0.0064 },
+      JPY: { KES: 0.81, JPY: 1, BTC: 0.0000015, ETH: 0.00002, USD: 0.0075 },
+      BTC: { KES: 5200000, JPY: 6700000, BTC: 1, ETH: 15, USD: 65000 },
+      ETH: { KES: 350000, JPY: 470000, BTC: 0.066, ETH: 1, USD: 4200 },
+      USD: { KES: 155.3, JPY: 133.3, BTC: 0.000015, ETH: 0.00024, USD: 1 }
+    };
 
     function updateWalletDisplay() {
       const list = document.getElementById("walletList");
@@ -78,6 +98,60 @@
         list.innerHTML += `<li><strong>${currency}</strong>: ${balance.toFixed(2)}</li>`;
       }
     }
+
+    function populateCurrencySelects() {
+      const fromSelect = document.getElementById("fromCurrency");
+      const toSelect = document.getElementById("toCurrency");
+      fromSelect.innerHTML = "";
+      toSelect.innerHTML = "";
+      Object.keys(wallet).forEach(currency => {
+        fromSelect.innerHTML += `<option value="${currency}">${currency}</option>`;
+        toSelect.innerHTML += `<option value="${currency}">${currency}</option>`;
+      });
+    }
+
+    function addFunds() {
+      const currency = document.getElementById("fundCurrency").value;
+      const amount = parseFloat(document.getElementById("fundAmount").value);
+      if (!isNaN(amount) && amount > 0) {
+        wallet[currency] += amount;
+        updateWalletDisplay();
+        document.getElementById("fundAmount").value = "";
+      }
+    }
+
+    function convertAndTransfer() {
+      const from = document.getElementById("fromCurrency").value;
+      const to = document.getElementById("toCurrency").value;
+      const amount = parseFloat(document.getElementById("sendAmount").value);
+      const resultText = document.getElementById("conversionResult");
+
+      if (from === to) {
+        resultText.innerText = "Cannot convert to the same currency.";
+        return;
+      }
+      if (isNaN(amount) || amount <= 0) {
+        resultText.innerText = "Enter a valid amount.";
+        return;
+      }
+      if (wallet[from] < amount) {
+        resultText.innerText = `Insufficient balance in ${from}.`;
+        return;
+      }
+
+      const rate = exchangeRates[from][to];
+      const converted = amount * rate;
+
+      wallet[from] -= amount;
+      wallet[to] += converted;
+
+      updateWalletDisplay();
+      resultText.innerText = `${amount} ${from} = ${converted.toFixed(2)} ${to}`;
+      document.getElementById("sendAmount").value = "";
+    }
+
+    populateCurrencySelects();
+    updateWalletDisplay();
   </script>
 </body>
 </html>
