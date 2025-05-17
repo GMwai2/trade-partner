@@ -44,10 +44,8 @@
     <input type="text" id="username" placeholder="Enter username">
     <label for="password">Password:</label>
     <input type="password" id="password" placeholder="Enter password">
-    <input type="checkbox" onclick="togglePassword()"> Show Password
     <button onclick="login()">Login</button>
     <p id="loginStatus" style="color: red;"></p>
-    <p><a href="#" onclick="promptResetPassword()">Forgot Password?</a></p>
   </div>
 
   <div id="dashboard">
@@ -103,22 +101,6 @@
     };
 
     let currentUser = null;
-
-    function togglePassword() {
-      const pw = document.getElementById("password");
-      pw.type = pw.type === "password" ? "text" : "password";
-    }
-
-    function promptResetPassword() {
-      const uname = prompt("Enter your username to reset password:");
-      if (uname in users) {
-        const newPass = prompt("Enter new password:");
-        users[uname].password = newPass;
-        alert("Password updated successfully.");
-      } else {
-        alert("Username not found.");
-      }
-    }
 
     function login() {
       const uname = document.getElementById("username").value;
@@ -200,12 +182,24 @@
         return;
       }
 
+      const kesEquivalent = amount * exchangeRates[from]["KES"];
+      let fee = 0;
+      if (kesEquivalent > 250) {
+        fee = amount * 0.01;
+      }
+      const totalDeduction = amount + fee;
+
+      if (users[currentUser].balances[from] < totalDeduction) {
+        status.innerText = `Insufficient balance to cover amount and transaction fee in ${from}.`;
+        return;
+      }
+
       const converted = amount * exchangeRates[from][to];
-      users[currentUser].balances[from] -= amount;
+      users[currentUser].balances[from] -= totalDeduction;
       users[found].balances[to] += converted;
 
       updateWalletDisplay();
-      status.innerText = `Success! Sent ${amount} ${from} = ${converted.toFixed(2)} ${to} to ${recipientName}`;
+      status.innerText = `Success! Sent ${amount} ${from} = ${converted.toFixed(2)} ${to} to ${recipientName}. Fee: ${fee.toFixed(2)} ${from}`;
       document.getElementById("sendAmount").value = "";
     }
   </script>
