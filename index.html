@@ -32,20 +32,39 @@
     ul {
       padding-left: 20px;
     }
-    #dashboard { display: none; }
+    #dashboard, #signup { display: none; }
   </style>
 </head>
 <body>
   <h2>Trade Partner Wallet</h2>
 
+  <div class="section">
+    <button onclick="toggleForm('login')">Login</button>
+    <button onclick="toggleForm('signup')">Sign Up</button>
+  </div>
+
   <div id="login" class="section">
     <h3>User Login</h3>
-    <label for="username">Username:</label>
-    <input type="text" id="username" placeholder="Enter username">
-    <label for="password">Password:</label>
-    <input type="password" id="password" placeholder="Enter password">
+    <label for="loginUsername">Username:</label>
+    <input type="text" id="loginUsername" placeholder="Enter username">
+    <label for="loginPassword">Password:</label>
+    <input type="password" id="loginPassword" placeholder="Enter password">
     <button onclick="login()">Login</button>
     <p id="loginStatus" style="color: red;"></p>
+  </div>
+
+  <div id="signup" class="section">
+    <h3>Create New Account</h3>
+    <label for="newUsername">Username:</label>
+    <input type="text" id="newUsername" placeholder="Choose username">
+    <label for="newPassword">Password:</label>
+    <input type="password" id="newPassword" placeholder="Create password">
+    <label for="email">Email:</label>
+    <input type="email" id="email" placeholder="Enter email">
+    <label for="preferredCurrency">Preferred Currency:</label>
+    <select id="preferredCurrency"></select>
+    <button onclick="signup()">Sign Up</button>
+    <p id="signupStatus" style="color: green;"></p>
   </div>
 
   <div id="dashboard">
@@ -78,17 +97,19 @@
 
   <script>
     const users = {
-      alice: {
-        password: "1234",
-        name: "Alice Njeri",
-        walletId: "ALC001",
-        balances: { KES: 1000, BTC: 0.02, USD: 0, JPY: 0, ETH: 0 }
+      admin: {
+        password: "admin123",
+        name: "Admin",
+        walletId: "ADM001",
+        email: "mdgakuo3@gmail.com",
+        balances: { KES: 0, BTC: 0, USD: 0, JPY: 0, ETH: 0 }
       },
-      bob: {
-        password: "5678",
-        name: "Bob Watanabe",
-        walletId: "BOB001",
-        balances: { JPY: 5000, ETH: 1.5, USD: 0, BTC: 0, KES: 0 }
+      schwadz: {
+        password: "1234",
+        name: "Schwadz",
+        walletId: "SCH001",
+        email: "mdgakuo2@gmail.com",
+        balances: { KES: 0, BTC: 0.0002, USD: 6.4, JPY: 1230, ETH: 0.03 }
       }
     };
 
@@ -102,12 +123,31 @@
 
     let currentUser = null;
 
+    function toggleForm(form) {
+      document.getElementById("login").style.display = form === 'login' ? 'block' : 'none';
+      document.getElementById("signup").style.display = form === 'signup' ? 'block' : 'none';
+    }
+
+    function populateCurrencySelects() {
+      const currencies = Object.keys(exchangeRates);
+      const fromSel = document.getElementById("fromCurrency");
+      const toSel = document.getElementById("toCurrency");
+      const preferredSel = document.getElementById("preferredCurrency");
+      fromSel.innerHTML = toSel.innerHTML = preferredSel.innerHTML = "";
+      currencies.forEach(c => {
+        fromSel.innerHTML += `<option value="${c}">${c}</option>`;
+        toSel.innerHTML += `<option value="${c}">${c}</option>`;
+        preferredSel.innerHTML += `<option value="${c}">${c}</option>`;
+      });
+    }
+
     function login() {
-      const uname = document.getElementById("username").value;
-      const pwd = document.getElementById("password").value;
+      const uname = document.getElementById("loginUsername").value;
+      const pwd = document.getElementById("loginPassword").value;
       if (users[uname] && users[uname].password === pwd) {
         currentUser = uname;
         document.getElementById("login").style.display = "none";
+        document.getElementById("signup").style.display = "none";
         document.getElementById("dashboard").style.display = "block";
         document.getElementById("userDisplay").innerText = users[uname].name;
         populateCurrencySelects();
@@ -118,21 +158,36 @@
       }
     }
 
+    function signup() {
+      const uname = document.getElementById("newUsername").value.trim();
+      const pwd = document.getElementById("newPassword").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const currency = document.getElementById("preferredCurrency").value;
+      if (!uname || !pwd || !email || !currency) {
+        document.getElementById("signupStatus").innerText = "All fields required.";
+        return;
+      }
+      if (users[uname]) {
+        document.getElementById("signupStatus").innerText = "Username already exists.";
+        return;
+      }
+      const walletId = uname.slice(0, 3).toUpperCase() + (Math.floor(Math.random() * 1000)).toString().padStart(3, '0');
+      users[uname] = {
+        password: pwd,
+        name: uname,
+        walletId: walletId,
+        email: email,
+        balances: { KES: 0, BTC: 0, USD: 0, JPY: 0, ETH: 0 }
+      };
+      users[uname].balances[currency] = 1000 * exchangeRates["KES"][currency];
+      document.getElementById("signupStatus").innerText = "Account created. You may log in.";
+    }
+
     function logout() {
       currentUser = null;
       document.getElementById("login").style.display = "block";
+      document.getElementById("signup").style.display = "none";
       document.getElementById("dashboard").style.display = "none";
-    }
-
-    function populateCurrencySelects() {
-      const currencies = Object.keys(exchangeRates);
-      const fromSel = document.getElementById("fromCurrency");
-      const toSel = document.getElementById("toCurrency");
-      fromSel.innerHTML = toSel.innerHTML = "";
-      currencies.forEach(c => {
-        fromSel.innerHTML += `<option value="${c}">${c}</option>`;
-        toSel.innerHTML += `<option value="${c}">${c}</option>`;
-      });
     }
 
     function updateWalletDisplay() {
@@ -182,26 +237,22 @@
         return;
       }
 
-      const kesEquivalent = amount * exchangeRates[from]["KES"];
-      let fee = 0;
-      if (kesEquivalent > 250) {
-        fee = amount * 0.01;
-      }
-      const totalDeduction = amount + fee;
-
-      if (users[currentUser].balances[from] < totalDeduction) {
-        status.innerText = `Insufficient balance to cover amount and transaction fee in ${from}.`;
-        return;
+      let charge = 0;
+      if (from === "KES" && amount > 250) {
+        charge = amount * 0.01;
+        users[currentUser].balances[from] -= charge;
       }
 
       const converted = amount * exchangeRates[from][to];
-      users[currentUser].balances[from] -= totalDeduction;
+      users[currentUser].balances[from] -= amount;
       users[found].balances[to] += converted;
 
       updateWalletDisplay();
-      status.innerText = `Success! Sent ${amount} ${from} = ${converted.toFixed(2)} ${to} to ${recipientName}. Fee: ${fee.toFixed(2)} ${from}`;
+      status.innerText = `Success! Sent ${amount} ${from} = ${converted.toFixed(2)} ${to} to ${recipientName}. Fee: ${charge.toFixed(2)} KES.`;
       document.getElementById("sendAmount").value = "";
     }
+
+    populateCurrencySelects();
   </script>
 </body>
 </html>
