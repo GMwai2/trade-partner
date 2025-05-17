@@ -32,7 +32,7 @@
     ul {
       padding-left: 20px;
     }
-    #dashboard, #register { display: none; }
+    #dashboard { display: none; }
   </style>
 </head>
 <body>
@@ -44,23 +44,10 @@
     <input type="text" id="username" placeholder="Enter username">
     <label for="password">Password:</label>
     <input type="password" id="password" placeholder="Enter password">
+    <input type="checkbox" onclick="togglePassword()"> Show Password
     <button onclick="login()">Login</button>
     <p id="loginStatus" style="color: red;"></p>
-    <p>New user? <a href="#" onclick="showRegister()">Register here</a></p>
-  </div>
-
-  <div id="register" class="section">
-    <h3>User Registration</h3>
-    <label for="regName">Full Legal Name:</label>
-    <input type="text" id="regName" placeholder="Full name">
-    <label for="regUsername">Username:</label>
-    <input type="text" id="regUsername" placeholder="Choose a username">
-    <label for="regPassword">Password:</label>
-    <input type="password" id="regPassword" placeholder="Choose a password">
-    <label for="regCurrency">Preferred Currency:</label>
-    <select id="regCurrency"></select>
-    <button onclick="registerUser()">Create Account</button>
-    <p id="registerStatus"></p>
+    <p><a href="#" onclick="promptResetPassword()">Forgot Password?</a></p>
   </div>
 
   <div id="dashboard">
@@ -107,8 +94,6 @@
       }
     };
 
-    let userCount = 2; // 2 preloaded users
-
     const exchangeRates = {
       KES: { KES: 1, JPY: 1.23, BTC: 0.000002, ETH: 0.00003, USD: 0.0064 },
       JPY: { KES: 0.81, JPY: 1, BTC: 0.0000015, ETH: 0.00002, USD: 0.0075 },
@@ -119,10 +104,20 @@
 
     let currentUser = null;
 
-    function showRegister() {
-      populateCurrencySelects();
-      document.getElementById("login").style.display = "none";
-      document.getElementById("register").style.display = "block";
+    function togglePassword() {
+      const pw = document.getElementById("password");
+      pw.type = pw.type === "password" ? "text" : "password";
+    }
+
+    function promptResetPassword() {
+      const uname = prompt("Enter your username to reset password:");
+      if (uname in users) {
+        const newPass = prompt("Enter new password:");
+        users[uname].password = newPass;
+        alert("Password updated successfully.");
+      } else {
+        alert("Username not found.");
+      }
     }
 
     function login() {
@@ -145,18 +140,16 @@
       currentUser = null;
       document.getElementById("login").style.display = "block";
       document.getElementById("dashboard").style.display = "none";
-      document.getElementById("register").style.display = "none";
     }
 
     function populateCurrencySelects() {
       const currencies = Object.keys(exchangeRates);
-      ["fromCurrency", "toCurrency", "regCurrency"].forEach(id => {
-        const sel = document.getElementById(id);
-        if (!sel) return;
-        sel.innerHTML = "";
-        currencies.forEach(c => {
-          sel.innerHTML += `<option value="${c}">${c}</option>`;
-        });
+      const fromSel = document.getElementById("fromCurrency");
+      const toSel = document.getElementById("toCurrency");
+      fromSel.innerHTML = toSel.innerHTML = "";
+      currencies.forEach(c => {
+        fromSel.innerHTML += `<option value="${c}">${c}</option>`;
+        toSel.innerHTML += `<option value="${c}">${c}</option>`;
       });
     }
 
@@ -214,42 +207,6 @@
       updateWalletDisplay();
       status.innerText = `Success! Sent ${amount} ${from} = ${converted.toFixed(2)} ${to} to ${recipientName}`;
       document.getElementById("sendAmount").value = "";
-    }
-
-    function registerUser() {
-      const name = document.getElementById("regName").value.trim();
-      const uname = document.getElementById("regUsername").value.trim();
-      const pwd = document.getElementById("regPassword").value;
-      const currency = document.getElementById("regCurrency").value;
-      const status = document.getElementById("registerStatus");
-
-      if (userCount >= 5) {
-        status.innerText = "Registration limit reached for demo (3 new users).";
-        return;
-      }
-      if (!name || !uname || !pwd || !currency) {
-        status.innerText = "All fields are required.";
-        return;
-      }
-      if (users[uname]) {
-        status.innerText = "Username already exists.";
-        return;
-      }
-
-      const walletId = uname.toUpperCase().substring(0, 3) + Math.floor(Math.random() * 1000);
-      const initBalances = {};
-      for (let cur of Object.keys(exchangeRates)) initBalances[cur] = 0;
-      initBalances[currency] = 1000;
-
-      users[uname] = {
-        password: pwd,
-        name: name,
-        walletId: walletId,
-        balances: initBalances
-      };
-
-      userCount++;
-      status.innerText = "Registration successful! You can now log in.";
     }
   </script>
 </body>
