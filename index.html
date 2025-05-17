@@ -7,7 +7,7 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 600px;
+      max-width: 800px;
       margin: 40px auto;
       padding: 20px;
       background-color: #f2f4f8;
@@ -17,7 +17,7 @@
     h2, h3 {
       text-align: center;
     }
-    label, select, input, button {
+    label, select, input, button, textarea {
       width: 100%;
       margin: 10px 0;
       padding: 10px;
@@ -32,8 +32,7 @@
     ul {
       padding-left: 20px;
     }
-    #dashboard { display: none; }
-    .wallet-id { font-weight: bold; color: #555; }
+    #dashboard, #adminDashboard { display: none; }
   </style>
 </head>
 <body>
@@ -52,15 +51,18 @@
   <div id="dashboard">
     <div class="section">
       <h3>Welcome, <span id="userDisplay"></span></h3>
-      <p class="wallet-id">Wallet ID: <span id="walletId"></span></p>
-      <h4>Your Wallet</h4>
+      <p><strong>Wallet ID:</strong> <span id="walletIdDisplay"></span></p>
+      <h4>Your Wallet Balances</h4>
       <ul id="walletList"></ul>
+      <h4>Your Profile</h4>
+      <p><strong>Email:</strong> <span id="emailDisplay"></span></p>
+      <p><strong>Address:</strong> <span id="addressDisplay"></span></p>
     </div>
 
     <div class="section">
       <h3>Transaction History</h3>
       <ul id="transactionHistory"></ul>
-      <button onclick="generateStatement()">Generate Statement</button>
+      <button onclick="downloadCSV()">Download Statement (CSV)</button>
     </div>
 
     <div class="section">
@@ -69,12 +71,17 @@
       <input type="text" id="receiverName" placeholder="Full legal name">
       <label for="receiverWallet">Recipient Wallet Number:</label>
       <input type="text" id="receiverWallet" placeholder="Wallet ID">
+      <label for="verifyBtn">Verify Recipient:</label>
+      <button onclick="verifyRecipient()">Verify</button>
+      <p id="verifyStatus"></p>
       <label for="fromCurrency">From Currency:</label>
       <select id="fromCurrency"></select>
       <label for="toCurrency">To Currency:</label>
       <select id="toCurrency"></select>
       <label for="sendAmount">Amount to Send:</label>
       <input type="number" id="sendAmount" placeholder="Enter amount">
+      <label for="pin">Authorization PIN:</label>
+      <input type="password" id="pin" placeholder="4-digit PIN">
       <button onclick="sendMoney()">Send</button>
       <p id="sendStatus"></p>
     </div>
@@ -87,42 +94,43 @@
   <script>
     const users = {
       kilush: {
-        password: "kilush123",
+        password: "password1",
         name: "Kilush",
         walletId: "KLS001",
-        balances: { KES: 1000, BTC: 0, ETH: 0, USD: 0, JPY: 0 },
-        history: []
+        email: "",
+        address: "",
+        pin: "1234",
+        balances: { KES: 1000, USD: 0, BTC: 0, ETH: 0 },
+        transactions: []
       },
       schwadz: {
-        password: "schwadz123",
+        password: "password2",
         name: "Schwadz",
-        walletId: "SWZ001",
-        balances: { KES: 0, BTC: 0.0001, ETH: 0.05, USD: 6.4, JPY: 1230 },
-        history: []
-      },
-      moses: {
-        password: "moses123",
-        name: "Moses",
-        walletId: "MOS001",
-        balances: { KES: 0, BTC: 0.0001, ETH: 0.05, USD: 6.4, JPY: 1230 },
-        history: []
+        walletId: "SWD002",
+        email: "mdgakuo2@gmail.com",
+        address: "",
+        pin: "1234",
+        balances: { USD: 6.4, KES: 0, BTC: 0, ETH: 0 },
+        transactions: []
       },
       admin: {
-        password: "admin123",
+        password: "adminpass",
         name: "Admin",
-        walletId: "ADM001",
-        balances: { KES: 0, BTC: 0, ETH: 0, USD: 0, JPY: 0 },
-        feesWallet: { KES: 0, BTC: 0, ETH: 0, USD: 0, JPY: 0 },
-        history: []
+        walletId: "ADM999",
+        email: "mdgakuo3@gmail.com",
+        address: "HQ",
+        pin: "1234",
+        balances: { KES: 0, USD: 0, BTC: 0, ETH: 0 },
+        feesWallet: { KES: 0 },
+        transactions: []
       }
     };
 
     const exchangeRates = {
-      KES: { KES: 1, JPY: 1.23, BTC: 0.000002, ETH: 0.00003, USD: 0.0064 },
-      JPY: { KES: 0.81, JPY: 1, BTC: 0.0000015, ETH: 0.00002, USD: 0.0075 },
-      BTC: { KES: 5200000, JPY: 6700000, BTC: 1, ETH: 15, USD: 65000 },
-      ETH: { KES: 350000, JPY: 470000, BTC: 0.066, ETH: 1, USD: 4200 },
-      USD: { KES: 155.3, JPY: 133.3, BTC: 0.000015, ETH: 0.00024, USD: 1 }
+      KES: { KES: 1, USD: 0.0064, BTC: 0.000002, ETH: 0.00003 },
+      USD: { KES: 155.3, USD: 1, BTC: 0.000015, ETH: 0.00024 },
+      BTC: { KES: 5200000, USD: 65000, BTC: 1, ETH: 15 },
+      ETH: { KES: 350000, USD: 4200, BTC: 0.066, ETH: 1 }
     };
 
     let currentUser = null;
@@ -130,18 +138,21 @@
     function login() {
       const uname = document.getElementById("username").value;
       const pwd = document.getElementById("password").value;
+      const status = document.getElementById("loginStatus");
       if (users[uname] && users[uname].password === pwd) {
         currentUser = uname;
+        status.innerText = "";
         document.getElementById("login").style.display = "none";
         document.getElementById("dashboard").style.display = "block";
         document.getElementById("userDisplay").innerText = users[uname].name;
-        document.getElementById("walletId").innerText = users[uname].walletId;
-        populateCurrencySelects();
+        document.getElementById("walletIdDisplay").innerText = users[uname].walletId;
+        document.getElementById("emailDisplay").innerText = users[uname].email;
+        document.getElementById("addressDisplay").innerText = users[uname].address || "(not set)";
         updateWalletDisplay();
+        populateCurrencySelects();
         updateTransactionHistory();
-        document.getElementById("loginStatus").innerText = "";
       } else {
-        document.getElementById("loginStatus").innerText = "Invalid credentials.";
+        status.innerText = "Invalid credentials.";
       }
     }
 
@@ -169,51 +180,69 @@
       for (let [currency, amount] of Object.entries(wallet)) {
         list.innerHTML += `<li><strong>${currency}</strong>: ${amount.toFixed(2)}</li>`;
       }
-      if (currentUser === "admin") {
-        list.innerHTML += `<h4>Transaction Fees Wallet</h4>`;
-        for (let [currency, amount] of Object.entries(users.admin.feesWallet)) {
-          list.innerHTML += `<li><strong>${currency}</strong>: ${amount.toFixed(2)}</li>`;
-        }
-      }
     }
 
     function updateTransactionHistory() {
-      const historyList = document.getElementById("transactionHistory");
-      const history = users[currentUser].history || [];
-      historyList.innerHTML = "";
-      if (history.length === 0) {
-        historyList.innerHTML = "<li>No transactions yet.</li>";
-      } else {
-        history.forEach(h => {
-          historyList.innerHTML += `<li>${h}</li>`;
-        });
-      }
+      const history = users[currentUser].transactions || [];
+      const list = document.getElementById("transactionHistory");
+      list.innerHTML = history.map(t => `<li>${t}</li>`).join("");
     }
 
-    function generateStatement() {
-      alert("Statement downloaded (demo only).");
+    function downloadCSV() {
+      const history = users[currentUser].transactions || [];
+      let csv = "Transaction History\n" + history.join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${currentUser}_statement.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function verifyRecipient() {
+      const name = document.getElementById("receiverName").value.trim().toLowerCase();
+      const wallet = document.getElementById("receiverWallet").value.trim();
+      const result = document.getElementById("verifyStatus");
+      for (let [uname, user] of Object.entries(users)) {
+        if (user.name.toLowerCase() === name && user.walletId === wallet) {
+          result.innerText = "✅ Verified: " + user.name;
+          return;
+        }
+      }
+      result.innerText = "❌ Verification failed. Check name and wallet ID.";
     }
 
     function sendMoney() {
       const from = document.getElementById("fromCurrency").value;
       const to = document.getElementById("toCurrency").value;
       const amount = parseFloat(document.getElementById("sendAmount").value);
+      const pin = document.getElementById("pin").value.trim();
       const recipientName = document.getElementById("receiverName").value.trim();
       const recipientWallet = document.getElementById("receiverWallet").value.trim();
       const status = document.getElementById("sendStatus");
 
-      if (!recipientName || !recipientWallet) {
-        status.innerText = "Please enter recipient's full legal name and wallet number.";
+      if (!recipientName || !recipientWallet || pin.length !== 4) {
+        status.innerText = "Please fill all fields including PIN.";
         return;
       }
+
+      if (pin !== users[currentUser].pin) {
+        status.innerText = "Invalid PIN.";
+        return;
+      }
+
       if (!amount || amount <= 0 || isNaN(amount)) {
-        status.innerText = "Please enter a valid amount.";
+        status.innerText = "Enter a valid amount.";
         return;
       }
+
       if (from === to) {
-        status.innerText = "Cannot convert to the same currency.";
+        status.innerText = "Select different currencies.";
         return;
       }
+
       if (users[currentUser].balances[from] < amount) {
         status.innerText = `Insufficient balance in ${from}.`;
         return;
@@ -228,32 +257,27 @@
       }
 
       if (!found) {
-        status.innerText = "Recipient not found or details incorrect.";
+        status.innerText = "Recipient not found or incorrect.";
         return;
       }
 
-      let charge = 0;
-      if (from === "KES" && amount > 250) {
-        charge = amount * 0.01;
-      }
-
-      const converted = (amount - charge) * exchangeRates[from][to];
-
+      const fee = amount > 250 ? amount * 0.01 : 0;
+      const net = amount - fee;
+      const converted = net * exchangeRates[from][to];
       users[currentUser].balances[from] -= amount;
       users[found].balances[to] += converted;
 
-      if (charge > 0) users.admin.feesWallet[from] += charge;
+      if (fee > 0) {
+        users.admin.feesWallet[from] = (users.admin.feesWallet[from] || 0) + fee;
+      }
 
-      const msg = `Sent ${amount} ${from} to ${recipientName} = ${converted.toFixed(2)} ${to} (charge: ${charge.toFixed(2)} ${from})`;
-      users[currentUser].history.push(msg);
-      users[found].history.push(`Received ${converted.toFixed(2)} ${to} from ${users[currentUser].name}`);
-      users.admin.history.push(msg);
+      const txNote = `Sent ${amount} ${from} (Fee: ${fee}) = ${converted.toFixed(2)} ${to} to ${recipientName}`;
+      users[currentUser].transactions.push(txNote);
+      users[found].transactions.push(`Received ${converted.toFixed(2)} ${to} from ${users[currentUser].name}`);
 
       updateWalletDisplay();
       updateTransactionHistory();
-
-      status.innerText = `Success! ${msg}`;
-      document.getElementById("sendAmount").value = "";
+      status.innerText = `✅ ${txNote}`;
     }
   </script>
 </body>
