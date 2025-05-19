@@ -1,224 +1,65 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trade Partner Wallet - Secure Access</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 600px;
-      margin: 40px auto;
-      padding: 20px;
-      background-color: #f2f4f8;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+const subAdmins = [];
+const transactionsLog = []; // Populate with actual transactions
+
+function createSubAdmin() {
+  const name = document.getElementById("subAdminName").value;
+  const role = document.getElementById("subAdminRole").value;
+  if (!name) {
+    document.getElementById("subAdminStatus").innerText = "Name required.";
+    return;
+  }
+  subAdmins.push({ name, role });
+  document.getElementById("subAdminStatus").innerText = `Sub-admin ${name} created with role ${role}.`;
+}
+
+function updateUserStats() {
+  const list = document.getElementById("userList");
+  const usersKeys = Object.keys(users);
+  document.getElementById("userCount").innerText = usersKeys.length;
+  list.innerHTML = "";
+  usersKeys.forEach(user => {
+    list.innerHTML += `<li>${user}</li>`;
+  });
+}
+
+function generateGraphs() {
+  const currencyVolume = {};
+  const chargeVolume = {};
+
+  transactionsLog.forEach(tx => {
+    const { currency, charge } = tx;
+    currencyVolume[currency] = (currencyVolume[currency] || 0) + 1;
+    chargeVolume[currency] = (chargeVolume[currency] || 0) + charge;
+  });
+
+  new Chart(document.getElementById("currencyGraph"), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(currencyVolume),
+      datasets: [{
+        label: 'Transactions',
+        data: Object.values(currencyVolume),
+        backgroundColor: 'rgba(75, 192, 192, 0.6)'
+      }]
     }
-    h2, h3 {
-      text-align: center;
+  });
+
+  new Chart(document.getElementById("chargeGraph"), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(chargeVolume),
+      datasets: [{
+        label: 'Charges Collected',
+        data: Object.values(chargeVolume),
+        backgroundColor: 'rgba(153, 102, 255, 0.6)'
+      }]
     }
-    label, select, input, button {
-      width: 100%;
-      margin: 10px 0;
-      padding: 10px;
-    }
-    .section {
-      background: #ffffff;
-      padding: 15px;
-      border-radius: 8px;
-      margin-top: 20px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    ul {
-      padding-left: 20px;
-    }
-    #dashboard { display: none; }
-  </style>
-</head>
-<body>
-  <h2>Trade Partner Wallet</h2>
+  });
+}
 
-  <div id="login" class="section">
-    <h3>User Login</h3>
-    <label for="username">Username:</label>
-    <input type="text" id="username" placeholder="Enter username">
-    <label for="password">Password:</label>
-    <input type="password" id="password" placeholder="Enter password">
-    <button onclick="login()">Login</button>
-    <p id="loginStatus" style="color: red;"></p>
-  </div>
-
-  <div id="dashboard">
-    <div class="section">
-      <h3>Welcome, <span id="userDisplay"></span></h3>
-      <h4>Your Wallet</h4>
-      <ul id="walletList"></ul>
-    </div>
-
-    <div class="section">
-      <h3>Send Money</h3>
-      <label for="receiverName">Recipient Legal Name:</label>
-      <input type="text" id="receiverName" placeholder="Full legal name">
-      <label for="receiverWallet">Recipient Wallet Number:</label>
-      <input type="text" id="receiverWallet" placeholder="Wallet ID">
-      <label for="fromCurrency">From Currency:</label>
-      <select id="fromCurrency"></select>
-      <label for="toCurrency">To Currency:</label>
-      <select id="toCurrency"></select>
-      <label for="sendAmount">Amount to Send:</label>
-      <input type="number" id="sendAmount" placeholder="Enter amount">
-      <button onclick="sendMoney()">Send</button>
-      <p id="sendStatus"></p>
-    </div>
-
-    <div class="section">
-      <button onclick="logout()">Logout</button>
-    </div>
-  </div>
-
-  <script>
-    const users = {
-      Alice: {
-        password: "1234",
-        name: "Alice Njeri",
-        walletId: "ALC001",
-        balances: { KES: 1000, BTC: 0.02, USD: 0, JPY: 0, ETH: 0 }
-      },
-      Bob: {
-        password: "5678",
-        name: "Bob Watanabe",
-        walletId: "BOB001",
-        balances: { JPY: 5000, ETH: 1.5, USD: 0, BTC: 0, KES: 0 }
-      },
-      Kilush: {
-        password: "kilush123",
-        name: "Kilush",
-        walletId: "KLS001",
-        balances: { KES: 1000, USD: 0, JPY: 0, BTC: 0, ETH: 0 }
-      },
-      Schwadz: {
-        password: "schwadz123",
-        name: "Schwadz",
-        walletId: "SWZ001",
-        balances: { USD: 6.4, KES: 0, JPY: 0, BTC: 0, ETH: 0 }
-      },
-      Moses: {
-        password: "moses123",
-        name: "Moses",
-        walletId: "MS001",
-        balances: { JPY: 1333, USD: 0, KES: 0, BTC: 0, ETH: 0 }
-      },
-      Admin: {
-        password: "admin123",
-        name: "System Admin",
-        walletId: "ADMIN001",
-        balances: { KES: 0, USD: 0, JPY: 0, BTC: 0, ETH: 0 }
-      }
-    };
-
-    const exchangeRates = {
-      KES: { KES: 1, JPY: 1.23, BTC: 0.000002, ETH: 0.00003, USD: 0.0064 },
-      JPY: { KES: 0.81, JPY: 1, BTC: 0.0000015, ETH: 0.00002, USD: 0.0075 },
-      BTC: { KES: 5200000, JPY: 6700000, BTC: 1, ETH: 15, USD: 65000 },
-      ETH: { KES: 350000, JPY: 470000, BTC: 0.066, ETH: 1, USD: 4200 },
-      USD: { KES: 155.3, JPY: 133.3, BTC: 0.000015, ETH: 0.00024, USD: 1 }
-    };
-
-    let currentUser = null;
-
-    function login() {
-      const uname = capitalizeFirstLetter(document.getElementById("username").value);
-      const pwd = document.getElementById("password").value;
-      if (users[uname] && users[uname].password === pwd) {
-        currentUser = uname;
-        document.getElementById("login").style.display = "none";
-        document.getElementById("dashboard").style.display = "block";
-        document.getElementById("userDisplay").innerText = users[uname].name;
-        populateCurrencySelects();
-        updateWalletDisplay();
-        document.getElementById("loginStatus").innerText = "";
-      } else {
-        document.getElementById("loginStatus").innerText = "Invalid credentials.";
-      }
-    }
-
-    function capitalizeFirstLetter(str) {
-      if (!str) return "";
-      return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-    }
-
-    function logout() {
-      currentUser = null;
-      document.getElementById("login").style.display = "block";
-      document.getElementById("dashboard").style.display = "none";
-    }
-
-    function populateCurrencySelects() {
-      const currencies = Object.keys(exchangeRates);
-      const fromSel = document.getElementById("fromCurrency");
-      const toSel = document.getElementById("toCurrency");
-      fromSel.innerHTML = toSel.innerHTML = "";
-      currencies.forEach(c => {
-        fromSel.innerHTML += `<option value="${c}">${c}</option>`;
-        toSel.innerHTML += `<option value="${c}">${c}</option>`;
-      });
-    }
-
-    function updateWalletDisplay() {
-      const wallet = users[currentUser].balances;
-      const list = document.getElementById("walletList");
-      list.innerHTML = "";
-      for (let [currency, amount] of Object.entries(wallet)) {
-        list.innerHTML += `<li><strong>${currency}</strong>: ${amount.toFixed(2)}</li>`;
-      }
-    }
-
-    function sendMoney() {
-      const from = document.getElementById("fromCurrency").value;
-      const to = document.getElementById("toCurrency").value;
-      const amount = parseFloat(document.getElementById("sendAmount").value);
-      const recipientName = document.getElementById("receiverName").value.trim();
-      const recipientWallet = document.getElementById("receiverWallet").value.trim();
-      const status = document.getElementById("sendStatus");
-
-      if (!recipientName || !recipientWallet) {
-        status.innerText = "Please enter recipient's full legal name and wallet number.";
-        return;
-      }
-      if (!amount || amount <= 0 || isNaN(amount)) {
-        status.innerText = "Please enter a valid amount.";
-        return;
-      }
-      if (from === to) {
-        status.innerText = "Cannot convert to the same currency.";
-        return;
-      }
-      if (users[currentUser].balances[from] < amount) {
-        status.innerText = `Insufficient balance in ${from}.`;
-        return;
-      }
-
-      let found = null;
-      for (const [uname, user] of Object.entries(users)) {
-        if (user.walletId === recipientWallet && user.name.toLowerCase() === recipientName.toLowerCase()) {
-          found = uname;
-          break;
-        }
-      }
-
-      if (!found) {
-        status.innerText = "Recipient not found or details incorrect.";
-        return;
-      }
-
-      const converted = amount * exchangeRates[from][to];
-      users[currentUser].balances[from] -= amount;
-      users[found].balances[to] += converted;
-
-      updateWalletDisplay();
-      status.innerText = `Success! Sent ${amount} ${from} = ${converted.toFixed(2)} ${to} to ${recipientName}`;
-      document.getElementById("sendAmount").value = "";
-    }
-  </script>
-</body>
-</html>
+// Call this when admin logs in
+function showAdminDashboard() {
+  document.getElementById("adminDashboard").style.display = "block";
+  updateUserStats();
+  generateGraphs();
+}
