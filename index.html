@@ -5,90 +5,306 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Trade Partner Wallet</title>
   <style>
-    body { font-family: Arial; background: #f0f2f5; padding: 20px; max-width: 800px; margin: auto; }
-    .box { background: white; padding: 20px; border-radius: 8px; margin-top: 20px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
-    h2, h3 { text-align: center; }
-    label { margin-top: 10px; display: block; }
-    input, select, button { width: 100%; padding: 8px; margin-top: 5px; }
-    .hidden { display: none; }
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 20px auto;
+      background: #f0f2f5;
+      padding: 20px;
+    }
+    .box {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    h2, h3, h4 {
+      text-align: center;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+    }
+    .hidden {
+      display: none;
+    }
+    canvas {
+      width: 100% !important;
+      max-width: 100%;
+    }
   </style>
 </head>
 <body>
 
-<div class="box" id="authBox">
-  <h2>Login</h2>
-  <label>Username</label>
-  <input type="text" id="username" />
-  <label>Password</label>
-  <input type="password" id="password" />
-  <button onclick="login()">Login</button>
-  <p id="authMessage" style="color: red;"></p>
-</div>
+  <div class="box" id="authBox">
+    <h2>Login</h2>
+    <label>Username</label>
+    <input type="text" id="username">
+    <label>Password</label>
+    <input type="password" id="password">
+    <input type="checkbox" onclick="togglePassword()"> Show Password
+    <button onclick="login()">Login</button>
+    <p id="authMessage" style="color: red;"></p>
+  </div>
 
-<div class="box hidden" id="userDashboard">
-  <h3>Welcome, <span id="welcomeName"></span></h3>
-  <p><strong>Wallet ID:</strong> <span id="walletID"></span></p>
-  <div id="balances"></div>
-  <button onclick="logout()">Logout</button>
-</div>
+  <div class="box hidden" id="userDashboard">
+    <h3>Welcome, <span id="welcomeName"></span></h3>
+    <p><strong>Wallet ID:</strong> <span id="walletID"></span></p>
+    <div id="balances"></div>
 
-<div class="box hidden" id="adminDashboard">
-  <h3>Admin Dashboard</h3>
-  <p>Total Users: <span id="totalUsers"></span></p>
-  <p>Total Transactions: <span id="totalTx"></span></p>
-  <button onclick="logout()">Logout</button>
-</div>
+    <h4>Send Money</h4>
+    <label>Recipient Name</label>
+    <input id="recipientName" />
+    <label>Recipient Wallet ID</label>
+    <input id="recipientWallet" />
+    <label>Currency</label>
+    <select id="sendCurrency"></select>
+    <label>Amount</label>
+    <input type="number" id="sendAmount" />
+    <label>Authorization PIN</label>
+    <input type="password" id="authPin" maxlength="4" />
+    <button onclick="sendMoney()">Send</button>
+    <p id="sendStatus"></p>
 
-<script>
-  const users = {
-    kilush: { name: "Kilush", password: "kilush123", pin: "1234", walletId: "WAL1001", balances: { KES: 1000 }, tx: [] },
-    schwadz: { name: "Schwadz", password: "schwadz123", pin: "1234", walletId: "WAL1002", balances: { USD: 6.4 }, tx: [] },
-    moses: { name: "Moses", password: "moses123", pin: "1234", walletId: "WAL1003", balances: { JPY: 1230 }, tx: [] },
-    admin: { name: "Admin", password: "admin123", isAdmin: true, walletId: "ADMIN", balances: {}, tx: [] }
-  };
+    <h4>Transaction History</h4>
+    <ul id="txHistory"></ul>
 
-  let currentUser = null;
+    <button onclick="logout()">Logout</button>
+  </div>
 
-  function login() {
-    const uname = document.getElementById("username").value.toLowerCase();
-    const pwd = document.getElementById("password").value;
+  <div class="box hidden" id="adminDashboard">
+    <h3>Admin Dashboard</h3>
+    <p>Total Users: <span id="totalUsers"></span></p>
+    <p>Total Transactions: <span id="totalTx"></span></p>
 
-    if (users[uname] && users[uname].password === pwd) {
-      currentUser = uname;
-      document.getElementById("authBox").classList.add("hidden");
-      document.getElementById("authMessage").innerText = "";
+    <h4>Admin Wallets</h4>
+    <p>Trading Wallet: <span id="adminTradingWallet">KES 0</span></p>
+    <p>Charge Wallet: <span id="adminChargeWallet">KES 0</span></p>
+    <button onclick="moveChargesToTrading()">Move Charges to Trading Wallet</button>
 
-      if (users[uname].isAdmin) {
-        document.getElementById("adminDashboard").classList.remove("hidden");
-        document.getElementById("totalUsers").innerText = Object.keys(users).length - 1;
-        document.getElementById("totalTx").innerText = users[uname].tx.length;
+    <h4>Create Sub-Admin</h4>
+    <input placeholder="Sub-Admin Username" id="subAdminUser" />
+    <input placeholder="Sub-Admin Password" id="subAdminPass" />
+    <button onclick="createSubAdmin()">Create</button>
+    <p id="subAdminMsg" style="color: green;"></p>
+
+    <h4>Analytics</h4>
+    <div>
+      <canvas id="txGraph"></canvas>
+    </div>
+    <div>
+      <canvas id="chargeGraph"></canvas>
+    </div>
+
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const users = {
+      kilush: { name: "Kilush", password: "kilush123", pin: "1234", walletId: "WAL1001", balances: { KES: 1000 }, tx: [] },
+      schwadz: { name: "Schwadz", password: "schwadz123", pin: "1234", walletId: "WAL1002", balances: { USD: 6.4 }, tx: [] },
+      moses: { name: "Moses", password: "moses123", pin: "1234", walletId: "WAL1003", balances: { JPY: 1230 }, tx: [] },
+      admin: { name: "Admin", password: "admin123", pin: "0000", isAdmin: true, walletId: "ADMIN", balances: {}, tx: [] }
+    };
+
+    const adminChargeWallet = { KES: 0 };
+    const adminTradingWallet = { KES: 0 };
+
+    let currentUser = null;
+
+    function togglePassword() {
+      const pw = document.getElementById("password");
+      pw.type = pw.type === "password" ? "text" : "password";
+    }
+
+    function login() {
+      const uname = document.getElementById("username").value.toLowerCase();
+      const pwd = document.getElementById("password").value;
+      if (users[uname] && users[uname].password === pwd) {
+        currentUser = uname;
+        document.getElementById("authBox").classList.add("hidden");
+        document.getElementById("authMessage").innerText = "";
+        if (users[uname].isAdmin) {
+          showAdminDashboard();
+        } else {
+          showUserDashboard();
+        }
       } else {
-        document.getElementById("userDashboard").classList.remove("hidden");
-        document.getElementById("welcomeName").innerText = users[uname].name;
-        document.getElementById("walletID").innerText = users[uname].walletId;
-        updateBalances();
+        document.getElementById("authMessage").innerText = "Invalid credentials.";
       }
-    } else {
-      document.getElementById("authMessage").innerText = "Invalid credentials.";
     }
-  }
 
-  function logout() {
-    currentUser = null;
-    document.getElementById("authBox").classList.remove("hidden");
-    document.getElementById("userDashboard").classList.add("hidden");
-    document.getElementById("adminDashboard").classList.add("hidden");
-  }
-
-  function updateBalances() {
-    const balanceDiv = document.getElementById("balances");
-    balanceDiv.innerHTML = "<h4>Balances</h4>";
-    const balances = users[currentUser].balances;
-    for (const currency in balances) {
-      balanceDiv.innerHTML += `<p>${currency}: ${balances[currency]}</p>`;
+    function logout() {
+      currentUser = null;
+      document.getElementById("authBox").classList.remove("hidden");
+      document.getElementById("userDashboard").classList.add("hidden");
+      document.getElementById("adminDashboard").classList.add("hidden");
     }
-  }
-</script>
+
+    function updateBalances() {
+      const user = users[currentUser];
+      let html = "<h4>Your Balances:</h4><ul>";
+      for (let currency in user.balances) {
+        html += `<li>${currency}: ${user.balances[currency]}</li>`;
+      }
+      html += "</ul>";
+      document.getElementById("balances").innerHTML = html;
+    }
+
+    function populateCurrencies() {
+      const select = document.getElementById("sendCurrency");
+      select.innerHTML = "";
+      const user = users[currentUser];
+      for (let c in user.balances) {
+        const opt = document.createElement("option");
+        opt.value = c;
+        opt.innerText = c;
+        select.appendChild(opt);
+      }
+    }
+
+    function sendMoney() {
+      const fromUser = users[currentUser];
+      const toWallet = document.getElementById("recipientWallet").value;
+      const currency = document.getElementById("sendCurrency").value;
+      const amount = parseFloat(document.getElementById("sendAmount").value);
+      const pin = document.getElementById("authPin").value;
+      const recipient = Object.values(users).find(u => u.walletId === toWallet);
+
+      if (pin !== fromUser.pin) {
+        document.getElementById("sendStatus").innerText = "Incorrect PIN.";
+        return;
+      }
+
+      if (!recipient) {
+        document.getElementById("sendStatus").innerText = "Recipient not found.";
+        return;
+      }
+
+      if (!fromUser.balances[currency] || fromUser.balances[currency] < amount) {
+        document.getElementById("sendStatus").innerText = "Insufficient balance.";
+        return;
+      }
+
+      const charge = amount > 250 ? amount * 0.01 : 0;
+      const finalAmount = amount - charge;
+
+      fromUser.balances[currency] -= amount;
+      recipient.balances[currency] = (recipient.balances[currency] || 0) + finalAmount;
+      if (charge > 0) adminChargeWallet.KES += charge;
+
+      fromUser.tx.push(`Sent ${finalAmount} ${currency} to ${toWallet}`);
+      recipient.tx.push(`Received ${finalAmount} ${currency} from ${fromUser.walletId}`);
+
+      updateBalances();
+      populateHistory();
+
+      document.getElementById("sendStatus").innerText = "Transaction successful.";
+    }
+
+    function populateHistory() {
+      const user = users[currentUser];
+      const list = document.getElementById("txHistory");
+      list.innerHTML = "";
+      user.tx.forEach(t => {
+        const li = document.createElement("li");
+        li.innerText = t;
+        list.appendChild(li);
+      });
+    }
+
+    function showUserDashboard() {
+      document.getElementById("userDashboard").classList.remove("hidden");
+      document.getElementById("welcomeName").innerText = users[currentUser].name;
+      document.getElementById("walletID").innerText = users[currentUser].walletId;
+      updateBalances();
+      populateCurrencies();
+      populateHistory();
+    }
+
+    function showAdminDashboard() {
+      document.getElementById("adminDashboard").classList.remove("hidden");
+      document.getElementById("totalUsers").innerText = Object.keys(users).length - 1;
+      document.getElementById("totalTx").innerText = Object.values(users).reduce((a, b) => a + b.tx.length, 0);
+      document.getElementById("adminChargeWallet").innerText = `KES ${adminChargeWallet.KES.toFixed(2)}`;
+      document.getElementById("adminTradingWallet").innerText = `KES ${adminTradingWallet.KES.toFixed(2)}`;
+      renderGraphs();
+    }
+
+    function moveChargesToTrading() {
+      adminTradingWallet.KES += adminChargeWallet.KES;
+      adminChargeWallet.KES = 0;
+      document.getElementById("adminChargeWallet").innerText = `KES ${adminChargeWallet.KES.toFixed(2)}`;
+      document.getElementById("adminTradingWallet").innerText = `KES ${adminTradingWallet.KES.toFixed(2)}`;
+    }
+
+    function createSubAdmin() {
+      const uname = document.getElementById("subAdminUser").value.toLowerCase();
+      const pwd = document.getElementById("subAdminPass").value;
+      if (!uname || !pwd) return alert("Fill both fields");
+      users[uname] = {
+        name: uname.charAt(0).toUpperCase() + uname.slice(1),
+        password: pwd,
+        pin: "1234",
+        isSubAdmin: true,
+        walletId: "SUB" + (Object.keys(users).length + 1000),
+        balances: {},
+        tx: []
+      };
+      document.getElementById("subAdminMsg").innerText = `Sub-admin ${uname} created.`;
+    }
+
+    function renderGraphs() {
+      const currencyCount = {};
+      const chargeCount = {};
+
+      Object.values(users).forEach(u => {
+        u.tx.forEach(t => {
+          const parts = t.split(" ");
+          const currency = parts[1];
+          if (t.startsWith("Sent")) {
+            currencyCount[currency] = (currencyCount[currency] || 0) + 1;
+            if (t.includes("to")) {
+              const amt = parseFloat(parts[1]);
+              const charge = amt > 250 ? amt * 0.01 : 0;
+              chargeCount[currency] = (chargeCount[currency] || 0) + charge;
+            }
+          }
+        });
+      });
+
+      new Chart(document.getElementById("txGraph"), {
+        type: "bar",
+        data: {
+          labels: Object.keys(currencyCount),
+          datasets: [{
+            label: "Transactions per Currency",
+            data: Object.values(currencyCount),
+            backgroundColor: "skyblue"
+          }]
+        }
+      });
+
+      new Chart(document.getElementById("chargeGraph"), {
+        type: "bar",
+        data: {
+          labels: Object.keys(chargeCount),
+          datasets: [{
+            label: "Charges Collected",
+            data: Object.values(chargeCount),
+            backgroundColor: "orange"
+          }]
+        }
+      });
+    }
+  </script>
 
 </body>
 </html>
