@@ -66,14 +66,24 @@
 </div>
 
 <script>
-  const users = {
-    kilush: { name: "Kilush", password: "kilush123", pin: "1234", walletId: "WAL1001", balances: { KES: 1000 }, tx: [] },
-    schwadz: { name: "Schwadz", password: "schwadz123", pin: "1234", walletId: "WAL1002", balances: { USD: 6.4 }, tx: [] },
-    moses: { name: "Moses", password: "moses123", pin: "1234", walletId: "WAL1003", balances: { JPY: 1230 }, tx: [] },
-    admin: { name: "Admin", password: "admin123", pin: "0000", isAdmin: true, walletId: "ADMIN", balances: {}, tx: [] }
-  };
+const users = {
+  kilush: { name: "Kilush", password: "kilush123", pin: "1234", walletId: "WAL1001", balances: { KES: 1000 }, tx: [] },
+  schwadz: { name: "Schwadz", password: "schwadz123", pin: "1234", walletId: "WAL1002", balances: { USD: 6.4 }, tx: [] },
+  moses: { name: "Moses", password: "moses123", pin: "1234", walletId: "WAL1003", balances: { JPY: 1230 }, tx: [] },
+  admin: { name: "Admin", password: "admin123", pin: "0000", isAdmin: true, walletId: "ADMIN", balances: {}, tx: [] }
+};
 
-  let currentUser = null;
+function login() {
+  const uname = document.getElementById("username").value.toLowerCase();
+  const pwd = document.getElementById("password").value;
+  if (users[uname] && users[uname].password === pwd) {
+    currentUser = uname;
+    ...
+  } else {
+    ...
+  }
+}
+
   const txLog = [];
   const adminChargeWallet = { KES: 0 };
   const adminTradingWallet = { KES: 0 };
