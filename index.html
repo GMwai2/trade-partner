@@ -19,7 +19,7 @@
       margin-bottom: 20px;
       box-shadow: 0 0 5px rgba(0,0,0,0.1);
     }
-    h2, h3 {
+    h2, h3, h4 {
       text-align: center;
     }
     label {
@@ -54,10 +54,8 @@
     <div id="balances"></div>
 
     <h4>Send Money</h4>
-    <label>Recipient Name</label>
+    <label>Recipient Username</label>
     <input id="recipientName" />
-    <label>Recipient Wallet ID</label>
-    <input id="recipientWallet" />
     <label>Currency</label>
     <select id="sendCurrency"></select>
     <label>Amount</label>
@@ -70,6 +68,15 @@
     <h4>Transaction History</h4>
     <ul id="txHistory"></ul>
 
+    <h4>Profile</h4>
+    <label>Physical Address (optional)</label>
+    <input id="userAddress" />
+    <button onclick="updateProfile()">Update Profile</button>
+
+    <h4>Change PIN</h4>
+    <input type="password" id="newPin" maxlength="4" placeholder="New 4-digit PIN">
+    <button onclick="changePin()">Update PIN</button>
+
     <button onclick="logout()">Logout</button>
   </div>
 
@@ -78,54 +85,51 @@
     <p>Total Users: <span id="totalUsers"></span></p>
     <p>Total Transactions: <span id="totalTx"></span></p>
 
-    <h4>Transaction Graph</h4>
-    <div id="txGraph"></div>
-
-    <h4>Transaction Charges Graph</h4>
-    <div id="chargeGraph"></div>
+    <h4>Transaction Charges Wallet: <span id="adminChargeWallet">KES 0</span></h4>
+    <h4>Trading Wallet: <span id="adminTradingWallet">KES 0</span></h4>
 
     <h4>Create Sub-Admin</h4>
     <input placeholder="Username" id="subAdminUser" />
     <input placeholder="Password" id="subAdminPass" />
-    <button onclick="createSubAdmin()">Create</button>
+    <button onclick="createSubAdmin()">Create Sub-Admin</button>
 
-    <h4>Charge Wallet: <span id="adminChargeWallet">KES 0.00</span></h4>
-    <h4>Trading Wallet: <span id="adminTradingWallet">KES 0.00</span></h4>
+    <h4>Charge Summary Graph (Simulated)</h4>
+    <ul id="chargeGraph"></ul>
 
     <button onclick="logout()">Logout</button>
   </div>
 
   <script>
-    const users = {
-      kilush: { name: "Kilush", password: "kilush123", pin: "1234", walletId: "WAL1001", balances: { KES: 1000 }, tx: [] },
-      schwadz: { name: "Schwadz", password: "schwadz123", pin: "1234", walletId: "WAL1002", balances: { USD: 6.4 }, tx: [] },
-      moses: { name: "Moses", password: "moses123", pin: "1234", walletId: "WAL1003", balances: { JPY: 1230 }, tx: [] },
-      admin: { name: "Admin", password: "admin123", pin: "0000", isAdmin: true, walletId: "ADMIN", balances: {}, tx: [] }
+    let users = {
+      kilush: { name: "Kilush", password: "kilush123", pin: "1234", walletId: "WAL1001", address: "", balances: { KES: 1000 }, tx: [] },
+      schwadz: { name: "Schwadz", password: "schwadz123", pin: "1234", walletId: "WAL1002", address: "", balances: { USD: 6.4 }, tx: [] },
+      moses: { name: "Moses", password: "moses123", pin: "1234", walletId: "WAL1003", address: "", balances: { JPY: 1230 }, tx: [] },
+      admin: { name: "Admin", password: "admin123", pin: "0000", walletId: "ADMIN", isAdmin: true, balances: {}, tx: [] }
     };
 
-    let currentUser = null;
     const exchangeRates = { KES: { USD: 0.0064, JPY: 1.23 }, USD: { KES: 155.3 }, JPY: { KES: 0.81 } };
-    const txLog = [];
-    const adminChargeWallet = { KES: 0 };
+    const chargeWallet = { KES: 0 };
+    let currentUser = localStorage.getItem("sessionUser");
+
+    if (currentUser && users[currentUser]) {
+      users[currentUser].isAdmin ? showAdminDashboard() : showUserDashboard();
+    }
 
     function login() {
       const uname = document.getElementById("username").value.toLowerCase();
       const pwd = document.getElementById("password").value;
       if (users[uname] && users[uname].password === pwd) {
         currentUser = uname;
+        localStorage.setItem("sessionUser", currentUser);
         document.getElementById("authBox").classList.add("hidden");
-        document.getElementById("authMessage").innerText = "";
-        if (users[uname].isAdmin) {
-          showAdminDashboard();
-        } else {
-          showUserDashboard();
-        }
+        users[uname].isAdmin ? showAdminDashboard() : showUserDashboard();
       } else {
         document.getElementById("authMessage").innerText = "Invalid credentials.";
       }
     }
 
     function logout() {
+      localStorage.removeItem("sessionUser");
       currentUser = null;
       document.getElementById("authBox").classList.remove("hidden");
       document.getElementById("userDashboard").classList.add("hidden");
@@ -137,5 +141,124 @@
       document.getElementById("userDashboard").classList.remove("hidden");
       document.getElementById("welcomeName").innerText = user.name;
       document.getElementById("walletID").innerText = user.walletId;
+      document.getElementById("userAddress").value = user.address || "";
       updateBalances();
-      populateCurrencies
+      updateTxHistory();
+      populateCurrencies();
+    }
+
+    function updateProfile() {
+      users[currentUser].address = document.getElementById("userAddress").value;
+      alert("Profile updated.");
+    }
+
+    function changePin() {
+      const newPin = document.getElementById("newPin").value;
+      if (newPin.length === 4 && !isNaN(newPin)) {
+        users[currentUser].pin = newPin;
+        alert("PIN updated.");
+      } else {
+        alert("Invalid PIN. Must be 4 digits.");
+      }
+    }
+
+    function populateCurrencies() {
+      const select = document.getElementById("sendCurrency");
+      select.innerHTML = "";
+      for (const c in users[currentUser].balances) {
+        const opt = document.createElement("option");
+        opt.value = c;
+        opt.text = c;
+        select.add(opt);
+      }
+    }
+
+    function updateBalances() {
+      const user = users[currentUser];
+      const div = document.getElementById("balances");
+      div.innerHTML = "<h4>Balances</h4>";
+      for (const [currency, amount] of Object.entries(user.balances)) {
+        div.innerHTML += `<p><strong>${currency}:</strong> ${amount.toFixed(2)}</p>`;
+      }
+    }
+
+    function updateTxHistory() {
+      const list = document.getElementById("txHistory");
+      list.innerHTML = "";
+      users[currentUser].tx.forEach(t => {
+        const item = document.createElement("li");
+        item.innerText = `${t.date}: Sent ${t.amount} ${t.currency} to ${t.to}`;
+        list.appendChild(item);
+      });
+    }
+
+    function sendMoney() {
+      const user = users[currentUser];
+      const recipientName = document.getElementById("recipientName").value.toLowerCase();
+      const currency = document.getElementById("sendCurrency").value;
+      const amount = parseFloat(document.getElementById("sendAmount").value);
+      const pin = document.getElementById("authPin").value;
+
+      if (!users[recipientName]) return alert("Recipient not found.");
+      if (user.balances[currency] < amount) return alert("Insufficient funds.");
+      if (pin !== user.pin) return alert("Incorrect PIN.");
+
+      let charge = amount > 250 ? amount * 0.01 : 0;
+      user.balances[currency] -= amount + charge;
+      users[recipientName].balances[currency] = (users[recipientName].balances[currency] || 0) + amount;
+      chargeWallet[currency] = (chargeWallet[currency] || 0) + charge;
+
+      const tx = {
+        to: recipientName,
+        amount: amount,
+        currency,
+        date: new Date().toLocaleString()
+      };
+      user.tx.push(tx);
+
+      document.getElementById("sendStatus").innerText = "Transaction successful.";
+      updateBalances();
+      updateTxHistory();
+    }
+
+    function showAdminDashboard() {
+      document.getElementById("adminDashboard").classList.remove("hidden");
+      document.getElementById("totalUsers").innerText = Object.keys(users).length - 1;
+      document.getElementById("totalTx").innerText = Object.values(users).reduce((acc, u) => acc + (u.tx?.length || 0), 0);
+      document.getElementById("adminChargeWallet").innerText = "KES " + (chargeWallet["KES"] || 0).toFixed(2);
+      document.getElementById("adminTradingWallet").innerText = "KES 0.00";
+      drawChargeGraph();
+    }
+
+    function drawChargeGraph() {
+      const graph = document.getElementById("chargeGraph");
+      graph.innerHTML = "";
+      for (const c in chargeWallet) {
+        graph.innerHTML += `<li>${c}: ${chargeWallet[c].toFixed(2)}</li>`;
+      }
+    }
+
+    function createSubAdmin() {
+      const uname = document.getElementById("subAdminUser").value.toLowerCase();
+      const pwd = document.getElementById("subAdminPass").value;
+      if (uname && pwd) {
+        users[uname] = { name: uname[0].toUpperCase() + uname.slice(1), password: pwd, isAdmin: true, balances: {}, tx: [], pin: "1234" };
+        alert("Sub-admin created.");
+      }
+    }
+
+    // Auto logout after 5 minutes of inactivity
+    let timeout;
+    function resetTimeout() {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        alert("Session expired due to inactivity.");
+        logout();
+      }, 5 * 60 * 1000);
+    }
+
+    ["click", "keypress", "mousemove"].forEach(evt => document.addEventListener(evt, resetTimeout));
+    resetTimeout();
+  </script>
+</body>
+</html>
