@@ -1,241 +1,82 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Trade Partner Wallet</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; background: #f4f6f8; padding: 20px; }
-    .box { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
-    label { display: block; margin-top: 10px; }
-    input, select, button { width: 100%; padding: 8px; margin-top: 5px; }
-    .hidden { display: none; }
-  </style>
-</head>
-<body>
+// app.js - Main Logic for Trade Partner Wallet Platform
 
-<div class="box" id="authBox">
-  <h2>Login</h2>
-  <label>Username</label>
-  <input type="text" id="username">
-  <label>Password</label>
-  <input type="password" id="password">
-  <input type="checkbox" onclick="togglePassword()"> Show Password
-  <button onclick="login()">Login</button>
-  <p id="authMessage" style="color: red;"></p>
-</div>
-
-<div class="box hidden" id="userDashboard">
-  <h3>Welcome, <span id="welcomeName"></span></h3>
-  <p><strong>Wallet ID:</strong> <span id="walletID"></span></p>
-  <div id="balances"></div>
-
-  <h4>Send Money</h4>
-  <label>Recipient Name</label>
-  <input id="recipientName" />
-  <label>Recipient Wallet ID</label>
-  <input id="recipientWallet" />
-  <label>Currency</label>
-  <select id="sendCurrency"></select>
-  <label>Amount</label>
-  <input type="number" id="sendAmount" />
-  <label>Authorization PIN</label>
-  <input type="password" id="authPin" maxlength="4" />
-  <button onclick="sendMoney()">Send</button>
-  <p id="sendStatus"></p>
-
-  <h4>Transaction History</h4>
-  <ul id="txHistory"></ul>
-
-  <button onclick="logout()">Logout</button>
-</div>
-
-<div class="box hidden" id="adminDashboard">
-  <h3>Admin Dashboard</h3>
-  <p>Total Users: <span id="totalUsers"></span></p>
-  <p>Total Transactions: <span id="totalTx"></span></p>
-
-  <h4>Charge Wallet: <span id="adminChargeWallet">KES 0.00</span></h4>
-  <h4>Trading Wallet: <span id="adminTradingWallet">KES 0.00</span></h4>
-
-  <h4>Create Sub-Admin</h4>
-  <input placeholder="Username" id="subAdminUser" />
-  <input placeholder="Password" id="subAdminPass" />
-  <button onclick="createSubAdmin()">Create Sub-Admin</button>
-
-  <button onclick="logout()">Logout</button>
-</div>
-
-<script>
-const users = {
-  kilush: { name: "Kilush", password: "kilush123", pin: "1234", walletId: "WAL1001", balances: { KES: 1000 }, tx: [] },
-  schwadz: { name: "Schwadz", password: "schwadz123", pin: "1234", walletId: "WAL1002", balances: { USD: 6.4 }, tx: [] },
-  moses: { name: "Moses", password: "moses123", pin: "1234", walletId: "WAL1003", balances: { JPY: 1230 }, tx: [] },
-  admin: { name: "Admin", password: "admin123", pin: "0000", isAdmin: true, walletId: "ADMIN", balances: {}, tx: [] }
+let users = {
+  kilush: {
+    name: "Kilush",
+    email: "kilush@example.com",
+    password: "kilush123",
+    pin: "1234",
+    walletId: "WAL1001",
+    balances: { KES: 1000 },
+    tx: [],
+    isAdmin: false,
+  },
+  schwadz: {
+    name: "Schwadz",
+    email: "schwadz@example.com",
+    password: "schwadz123",
+    pin: "1234",
+    walletId: "WAL1002",
+    balances: { USD: 6.4 },
+    tx: [],
+    isAdmin: false,
+  },
+  moses: {
+    name: "Moses",
+    email: "moses@example.com",
+    password: "moses123",
+    pin: "1234",
+    walletId: "WAL1003",
+    balances: { JPY: 1230 },
+    tx: [],
+    isAdmin: false,
+  },
+  admin: {
+    name: "Admin",
+    email: "admin@example.com",
+    password: "admin123",
+    pin: "0000",
+    isAdmin: true,
+    walletId: "ADMIN",
+    balances: { KES: 0, USD: 0, JPY: 0 },
+    tx: [],
+  },
 };
 
-function login() {
-  const uname = document.getElementById("username").value.toLowerCase();
-  const pwd = document.getElementById("password").value;
-  if (users[uname] && users[uname].password === pwd) {
-    currentUser = uname;
-    ...
-  } else {
-    ...
-  }
+let currentUser = null;
+const exchangeRates = {
+  KES: { USD: 0.0064, JPY: 1.23 },
+  USD: { KES: 155.3 },
+  JPY: { KES: 0.81 },
+};
+const txLog = [];
+const adminChargeWallet = { KES: 0, USD: 0, JPY: 0 };
+
+// Utility functions
+function generateWalletID() {
+  return "WAL" + Math.floor(Math.random() * 100000);
 }
 
-  const txLog = [];
-  const adminChargeWallet = { KES: 0 };
-  const adminTradingWallet = { KES: 0 };
+function validateCredentials(username, password) {
+  return users[username] && users[username].password === password;
+}
 
-  function togglePassword() {
-    const pw = document.getElementById("password");
-    pw.type = pw.type === "password" ? "text" : "password";
-  }
+function registerUser(name, email, password, pin, preferredCurrency) {
+  const username = name.toLowerCase();
+  if (users[username]) return false;
 
-  function login() {
-    const uname = document.getElementById("username").value.toLowerCase();
-    const pwd = document.getElementById("password").value;
-    if (users[uname] && users[uname].password === pwd) {
-      currentUser = uname;
-      document.getElementById("authBox").classList.add("hidden");
-      document.getElementById("authMessage").innerText = "";
-      if (users[uname].isAdmin) showAdminDashboard();
-      else showUserDashboard();
-    } else {
-      document.getElementById("authMessage").innerText = "Invalid credentials.";
-    }
-  }
+  const walletId = generateWalletID();
+  users[username] = {
+    name,
+    email,
+    password,
+    pin,
+    walletId,
+    balances: { [preferredCurrency]: 1000 },
+    tx: [],
+    isAdmin: false,
+  };
+  return true;
+}
 
-  function logout() {
-    currentUser = null;
-    document.getElementById("authBox").classList.remove("hidden");
-    document.getElementById("userDashboard").classList.add("hidden");
-    document.getElementById("adminDashboard").classList.add("hidden");
-  }
-
-  function showUserDashboard() {
-    const user = users[currentUser];
-    document.getElementById("userDashboard").classList.remove("hidden");
-    document.getElementById("welcomeName").innerText = user.name;
-    document.getElementById("walletID").innerText = user.walletId;
-    updateBalances();
-    populateCurrencies();
-    updateTxHistory();
-  }
-
-  function updateBalances() {
-    const user = users[currentUser];
-    const balances = Object.entries(user.balances).map(([cur, val]) =>
-      `<p><strong>${cur}:</strong> ${val.toFixed(2)}</p>`).join("");
-    document.getElementById("balances").innerHTML = balances;
-  }
-
-  function populateCurrencies() {
-    const user = users[currentUser];
-    const select = document.getElementById("sendCurrency");
-    select.innerHTML = "";
-    Object.keys(user.balances).forEach(cur => {
-      const option = document.createElement("option");
-      option.value = cur;
-      option.text = cur;
-      select.appendChild(option);
-    });
-  }
-
-  function sendMoney() {
-    const user = users[currentUser];
-    const name = document.getElementById("recipientName").value;
-    const walletId = document.getElementById("recipientWallet").value;
-    const currency = document.getElementById("sendCurrency").value;
-    const amount = parseFloat(document.getElementById("sendAmount").value);
-    const pin = document.getElementById("authPin").value;
-
-    if (pin !== user.pin) {
-      document.getElementById("sendStatus").innerText = "Invalid PIN.";
-      return;
-    }
-
-    if (!name || !walletId || isNaN(amount) || amount <= 0) {
-      document.getElementById("sendStatus").innerText = "Enter valid transfer details.";
-      return;
-    }
-
-    const now = Date.now();
-    const recentTx = user.tx.find(t => t.to === walletId && t.amount === amount && t.currency === currency && now - t.time < 60000);
-    if (recentTx) {
-      document.getElementById("sendStatus").innerText = "Duplicate transaction detected. Please wait a minute.";
-      return;
-    }
-
-    if (!user.balances[currency] || user.balances[currency] < amount) {
-      document.getElementById("sendStatus").innerText = "Insufficient balance.";
-      return;
-    }
-
-    const recipient = Object.values(users).find(u => u.walletId === walletId);
-    if (!recipient) {
-      document.getElementById("sendStatus").innerText = "Recipient not found.";
-      return;
-    }
-
-    const charge = amount > 250 ? Math.min(amount * 0.01, 1000) : 0;
-    if (user.balances[currency] < amount + charge) {
-      document.getElementById("sendStatus").innerText = "Not enough balance to cover transaction + charge.";
-      return;
-    }
-
-    user.balances[currency] -= (amount + charge);
-    adminChargeWallet[currency] = (adminChargeWallet[currency] || 0) + charge;
-    recipient.balances[currency] = (recipient.balances[currency] || 0) + amount;
-
-    const tx = { from: user.walletId, to: walletId, currency, amount, time: now };
-    user.tx.push(tx);
-    recipient.tx.push(tx);
-    txLog.push(tx);
-
-    updateBalances();
-    updateTxHistory();
-    document.getElementById("sendStatus").innerText = "Transfer successful!";
-  }
-
-  function updateTxHistory() {
-    const list = document.getElementById("txHistory");
-    const txs = users[currentUser].tx;
-    list.innerHTML = "";
-    txs.forEach(tx => {
-      const li = document.createElement("li");
-      li.innerText = `To ${tx.to}: ${tx.amount} ${tx.currency}`;
-      list.appendChild(li);
-    });
-  }
-
-  function showAdminDashboard() {
-    document.getElementById("adminDashboard").classList.remove("hidden");
-    document.getElementById("totalUsers").innerText = Object.keys(users).length - 1;
-    document.getElementById("totalTx").innerText = txLog.length;
-    document.getElementById("adminChargeWallet").innerText = `KES ${adminChargeWallet.KES.toFixed(2)}`;
-    document.getElementById("adminTradingWallet").innerText = `KES ${adminTradingWallet.KES.toFixed(2)}`;
-  }
-
-  function createSubAdmin() {
-    const user = document.getElementById("subAdminUser").value.toLowerCase();
-    const pass = document.getElementById("subAdminPass").value;
-    if (users[user]) {
-      alert("Username already exists.");
-      return;
-    }
-    users[user] = {
-      name: user.charAt(0).toUpperCase() + user.slice(1),
-      password: pass,
-      isAdmin: true,
-      walletId: "SUB" + Math.floor(Math.random() * 10000),
-      balances: {},
-      tx: []
-    };
-    alert("Sub-admin created.");
-  }
-</script>
-
-</body>
-</html>
+// More functions (like transfer money, show admin stats, OTP verification, water wall etc.) will follow in the next part.
