@@ -220,11 +220,122 @@
         <br/><br/>
         <button onclick="logout()">Logout</button>
         ${currentUser.isAdmin ? '<p><i>Admin Mode Active</i></p>' : ''}
-      </div>
+      </div<div style="max-width: 400px; margin: auto; padding: 20px; border: 1px solid #ccc;">
+  <h2>Transfer Money</h2>
+
+  <label for="recipientAccount">Recipient Wallet Number:</label>
+  <input type="text" id="recipientAccount" oninput="validateRecipient()" required><br><br>
+
+  <p id="recipientNameDisplay" style="font-weight: bold; color: green;"></p>
+
+  <label for="transferAmount">Amount to Send:</label>
+  <input type="number" id="transferAmount" min="1" required oninput="checkPinEntered()"><br><br>
+
+  <label for="pinField">Enter PIN:</label>
+  <input type="password" id="pinField" maxlength="4" disabled oninput="checkPinEntered()"><br><br>
+
+  <button id="sendButton" onclick="submitTransfer()" disabled>Send</button>
+
+  <p id="transferMessage" style="color: red; font-weight: bold;"></p>
+</div>
+>
     `;
   }
 
-  function confirmTransfer() {
+  function confirmTransfer() {let confirmedRecipient = null;
+let loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+let allUsers = JSON.parse(localStorage.getItem('users')) || [];
+
+function validateRecipient() {
+  const recipientInput = document.getElementById('recipientAccount').value.trim();
+  const display = document.getElementById('recipientNameDisplay');
+  confirmedRecipient = allUsers.find(u => u.walletNumber === recipientInput && u.walletNumber !== loggedInUser.walletNumber);
+
+  if (confirmedRecipient) {
+    display.textContent = "Confirm Recipient: " + confirmedRecipient.name;
+    document.getElementById('pinField').disabled = false;
+  } else {
+    display.textContent = "Recipient not found or same as sender.";
+    confirmedRecipient = null;
+    document.getElementById('pinField').disabled = true;
+    document.getElementById('sendButton').disabled = true;
+  }
+}
+
+function checkPinEntered() {
+  const pin = document.getElementById('pinField').value;
+  const amount = document.getElementById('transferAmount').value;
+  if (pin.length === 4 && confirmedRecipient && amount > 0) {
+    document.getElementById('sendButton').disabled = false;
+  } else {
+    document.getElementById('sendButton').disabled = true;
+  }
+}
+
+function submitTransfer() {
+  const amount = parseFloat(document.getElementById('transferAmount').value);
+  const pin = document.getElementById('pinField').value;
+  const message = document.getElementById('transferMessage');
+
+  if (!confirmedRecipient || isNaN(amount) || amount <= 0 || pin.length !== 4) {
+    message.textContent = "Invalid transfer details.";
+    return;
+  }
+
+  // Verify PIN
+  if (pin !== loggedInUser.pin) {
+    message.textContent = "Incorrect PIN.";
+    return;
+  }
+
+  const senderIndex = allUsers.findIndex(u => u.walletNumber === loggedInUser.walletNumber);
+  const recipientIndex = allUsers.findIndex(u => u.walletNumber === confirmedRecipient.walletNumber);
+
+  // Check sufficient balance
+  let charge = amount > 250 ? Math.min(amount * 0.01, 1000) : 0;
+  const totalDebit = amount + charge;
+
+  if (allUsers[senderIndex].walletBalance < totalDebit) {
+    message.textContent = "Insufficient balance.";
+    return;
+  }
+
+  // Update sender and recipient balances
+  allUsers[senderIndex].walletBalance -= totalDebit;
+  allUsers[recipientIndex].walletBalance += amount;
+
+  // Update transaction log
+  const transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+  const now = new Date().toISOString();
+
+  transactions.push({
+    from: loggedInUser.walletNumber,
+    to: confirmedRecipient.walletNumber,
+    amount: amount,
+    charge: charge,
+    time: now
+  });
+
+  // Save updates
+  localStorage.setItem('users', JSON.stringify(allUsers));
+  localStorage.setItem('transactions', JSON.stringify(transactions));
+
+  // Update session data for sender
+  localStorage.setItem('loggedInUser', JSON.stringify(allUsers[senderIndex]));
+
+  message.style.color = 'green';
+  message.textContent = "Transfer successful.";
+
+  // Reset form
+  document.getElementById('recipientAccount').value = "";
+  document.getElementById('recipientNameDisplay').textContent = "";
+  document.getElementById('transferAmount').value = "";
+  document.getElementById('pinField').value = "";
+  document.getElementById('pinField').disabled = true;
+  document.getElementById('sendButton').disabled = true;
+  confirmedRecipient = null;
+}
+
     const recipientName = document.getElementById("recipient").value.toLowerCase();
     const amount = parseFloat(document.getElementById("amount").value);
     const currency = document.getElementById("currency").value;
