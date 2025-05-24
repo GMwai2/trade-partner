@@ -73,198 +73,183 @@
     </div>
   </div>
 
-  <script>
-    let users = {
-      kilush: {
-        name: "Kilush",
-        email: "kilush@example.com",
-        password: "kilush123",
-        pin: "1234",
-        walletId: "WAL1001",
-        balances: { KES: 1000 },
-        tx: [],
-        isAdmin: false,
-      },
-      schwadz: {
-        name: "Schwadz",
-        email: "schwadz@example.com",
-        password: "schwadz123",
-        pin: "1234",
-        walletId: "WAL1002",
-        balances: { USD: 6.4 },
-        tx: [],
-        isAdmin: false,
-      },
-      moses: {
-        name: "Moses",
-        email: "moses@example.com",
-        password: "moses123",
-        pin: "1234",
-        walletId: "WAL1003",
-        balances: { JPY: 1230 },
-        tx: [],
-        isAdmin: false,
-      },
-      admin: {
-        name: "Admin",
-        email: "admin@example.com",
-        password: "admin123",
-        pin: "0000",
-        isAdmin: true,
-        walletId: "ADMIN",
-        balances: { KES: 0, USD: 0, JPY: 0 },
-        tx: [],
-      },
+<script>
+  let users = {
+    kilush: {
+      name: "Kilush",
+      email: "kilush@example.com",
+      password: "kilush123",
+      pin: "1234",
+      walletId: "WAL1001",
+      balances: { KES: 1000 },
+      tx: [],
+      isAdmin: false,
+    },
+    schwadz: {
+      name: "Schwadz",
+      email: "schwadz@example.com",
+      password: "schwadz123",
+      pin: "1234",
+      walletId: "WAL1002",
+      balances: { USD: 6.4 },
+      tx: [],
+      isAdmin: false,
+    },
+    moses: {
+      name: "Moses",
+      email: "moses@example.com",
+      password: "moses123",
+      pin: "1234",
+      walletId: "WAL1003",
+      balances: { JPY: 1230 },
+      tx: [],
+      isAdmin: false,
+    },
+    admin: {
+      name: "Admin",
+      email: "admin@example.com",
+      password: "admin123",
+      pin: "0000",
+      isAdmin: true,
+      walletId: "ADMIN",
+      balances: { KES: 0, USD: 0, JPY: 0 },
+      tx: [],
+    },
+  };
+
+  let currentUser = null;
+
+  function generateWalletID() {
+    return "WAL" + Math.floor(Math.random() * 100000);
+  }
+
+  function validateCredentials(username, password) {
+    return users[username] && users[username].password === password;
+  }
+
+  function togglePassword() {
+    const pwd = document.getElementById("loginPassword");
+    pwd.type = pwd.type === "password" ? "text" : "password";
+  }
+
+  function toggleForms() {
+    document.getElementById("loginForm").classList.toggle("hidden");
+    document.getElementById("registerForm").classList.toggle("hidden");
+  }
+
+  function register() {
+    const name = document.getElementById("regName").value;
+    const email = document.getElementById("regEmail").value;
+    const password = document.getElementById("regPassword").value;
+    const pin = document.getElementById("regPin").value;
+    const preferredCurrency = document.getElementById("regCurrency").value;
+    const username = name.toLowerCase().replace(/\s+/g, '');
+
+    if (users[username]) {
+      alert("Username already exists!");
+      return;
+    }
+
+    const walletId = generateWalletID();
+    users[username] = {
+      name,
+      email,
+      password,
+      pin,
+      walletId,
+      balances: { [preferredCurrency]: 1000 },
+      tx: [],
+      isAdmin: false,
     };
-
-    let currentUser = null;
-
-    function generateWalletID() {
-      return "WAL" + Math.floor(Math.random() * 100000);
-    }
-
-    function validateCredentials(username, password) {
-      return users[username] && users[username].password === password;
-    }
-
-    function togglePassword() {
-      const pwd = document.getElementById("loginPassword");
-      pwd.type = pwd.type === "password" ? "text" : "password";
-    }
-
-    function toggleForms() {
-      document.getElementById("loginForm").classList.toggle("hidden");
-      document.getElementById("registerForm").classList.toggle("hidden");
-    }
-
-    function register() {
-      const name = document.getElementById("regName").value;
-      const email = document.getElementById("regEmail").value;
-      const password = document.getElementById("regPassword").value;
-      const pin = document.getElementById("regPin").value;
-      const preferredCurrency = document.getElementById("regCurrency").value;
-      const username = name.toLowerCase().replace(/\s+/g, '');
-
-      if (users[username]) {
-        alert("Username already exists!");
-        return;
-      }
-
-      const walletId = generateWalletID();
-      users[username] = {
-        name,
-        email,
-        password,
-        pin,
-        walletId,
-        balances: { [preferredCurrency]: 1000 },
-        tx: [],
-        isAdmin: false,
-      };
-      alert("Registration successful. You can now log in.");
-      toggleForms();
-    }
-    function login() {function showDashboard() {
-  document.body.innerHTML = `
-    <div class="container">
-      <h2>Welcome, ${currentUser.name}</h2>
-      <p><strong>Wallet ID:</strong> ${currentUser.walletId}</p>
-      <p><strong>Your Balances:</strong></p>
-      <ul>
-        ${Object.entries(currentUser.balances).map(([cur, amt]) => `<li>${cur}: ${amt}</li>`).join('')}
-      </ul>
-
-      <h3>Transfer Money</h3>
-      <input type="text" id="recipient" placeholder="Recipient Username" />
-      <input type="number" id="amount" placeholder="Amount" />
-      <select id="currency">
-        <option value="KES">KES</option>
-        <option value="USD">USD</option>
-        <option value="JPY">JPY</option>
-      </select>
-      <input type="password" id="txPin" placeholder="Enter PIN to Authorize" />
-      <button onclick="confirmTransfer()">Send</button>
-
-      <br/><br/>
-      <button onclick="logout()">Logout</button>
-    </div>
-  `;
-}
-
-     function login() {
-  const username = document.getElementById("loginUsername").value.toLowerCase();
-  const password = document.getElementById("loginPassword").value;
-
-  if (validateCredentials(username, password)) {
-    currentUser = users[username];
-    localStorage.setItem("loggedInUser", username);  // persist session
-    showDashboard();
-  } else {
-    alert("Invalid login credentials");
+    alert("Registration successful. You can now log in.");
+    toggleForms();
   }
-}
 
+  function login() {
+    const username = document.getElementById("loginUsername").value.toLowerCase();
+    const password = document.getElementById("loginPassword").value;
 
-   function logout() {
-  localStorage.removeItem("loggedInUser");
-  location.reload();
-}
-
-
-    function showDashboard() {
-      document.body.innerHTML = \`
-        <div class="container">
-          <h2>Welcome, \${currentUser.name}</h2>
-          <p>Wallet ID: \${currentUser.walletId}</p>
-          <h3>Balances</h3>
-          <ul>
-            \${Object.entries(currentUser.balances).map(([cur, val]) => '<li>' + cur + ': ' + val + '</li>').join('')}
-          </ul>
-          <button onclick="logout()">Logout</button>
-          \${currentUser.isAdmin ? '<p><i>Admin Mode Active</i></p>' : ''}
-        </div>
-      \`;
+    if (validateCredentials(username, password)) {
+      currentUser = users[username];
+      localStorage.setItem("loggedInUser", username);  // persist session
+      showDashboard();
+    } else {
+      alert("Invalid login credentials");
     }
-  </script>
-</body>
-</html>
-window.onload = () => {
-  const savedUser = localStorage.getItem("loggedInUser");
-  if (savedUser && users[savedUser]) {
-    currentUser = users[savedUser];
+  }
+
+  function logout() {
+    localStorage.removeItem("loggedInUser");
+    location.reload();
+  }
+
+  function showDashboard() {
+    document.body.innerHTML = `
+      <div class="container">
+        <h2>Welcome, ${currentUser.name}</h2>
+        <p><strong>Wallet ID:</strong> ${currentUser.walletId}</p>
+        <p><strong>Your Balances:</strong></p>
+        <ul>
+          ${Object.entries(currentUser.balances).map(([cur, amt]) => `<li>${cur}: ${amt}</li>`).join('')}
+        </ul>
+
+        <h3>Transfer Money</h3>
+        <input type="text" id="recipient" placeholder="Recipient Username" />
+        <input type="number" id="amount" placeholder="Amount" />
+        <select id="currency">
+          <option value="KES">KES</option>
+          <option value="USD">USD</option>
+          <option value="JPY">JPY</option>
+        </select>
+        <input type="password" id="txPin" placeholder="Enter PIN to Authorize" />
+        <button onclick="confirmTransfer()">Send</button>
+
+        <br/><br/>
+        <button onclick="logout()">Logout</button>
+        ${currentUser.isAdmin ? '<p><i>Admin Mode Active</i></p>' : ''}
+      </div>
+    `;
+  }
+
+  function confirmTransfer() {
+    const recipientName = document.getElementById("recipient").value.toLowerCase();
+    const amount = parseFloat(document.getElementById("amount").value);
+    const currency = document.getElementById("currency").value;
+    const enteredPin = document.getElementById("txPin").value;
+
+    if (!users[recipientName]) {
+      alert("Recipient not found!");
+      return;
+    }
+
+    if (enteredPin !== currentUser.pin) {
+      alert("Incorrect PIN!");
+      return;
+    }
+
+    if (!currentUser.balances[currency] || currentUser.balances[currency] < amount) {
+      alert("Insufficient funds!");
+      return;
+    }
+
+    // Proceed with transaction
+    currentUser.balances[currency] -= amount;
+    if (!users[recipientName].balances[currency]) {
+      users[recipientName].balances[currency] = 0;
+    }
+    users[recipientName].balances[currency] += amount;
+
+    currentUser.tx.push(`Sent ${amount} ${currency} to ${recipientName}`);
+    users[recipientName].tx.push(`Received ${amount} ${currency} from ${currentUser.name}`);
+    alert("Transfer successful!");
     showDashboard();
   }
-};
-function confirmTransfer() {
-  const recipientName = document.getElementById("recipient").value.toLowerCase();
-  const amount = parseFloat(document.getElementById("amount").value);
-  const currency = document.getElementById("currency").value;
-  const enteredPin = document.getElementById("txPin").value;
 
-  if (!users[recipientName]) {
-    alert("Recipient not found!");
-    return;
-  }
-
-  if (enteredPin !== currentUser.pin) {
-    alert("Incorrect PIN!");
-    return;
-  }
-
-  if (!currentUser.balances[currency] || currentUser.balances[currency] < amount) {
-    alert("Insufficient funds!");
-    return;
-  }
-
-  // Proceed with transaction
-  currentUser.balances[currency] -= amount;
-  if (!users[recipientName].balances[currency]) {
-    users[recipientName].balances[currency] = 0;
-  }
-  users[recipientName].balances[currency] += amount;
-
-  currentUser.tx.push(`Sent ${amount} ${currency} to ${recipientName}`);
-  users[recipientName].tx.push(`Received ${amount} ${currency} from ${currentUser.name}`);
-  alert("Transfer successful!");
-  showDashboard();
-}
+  window.onload = () => {
+    const savedUser = localStorage.getItem("loggedInUser");
+    if (savedUser && users[savedUser]) {
+      currentUser = users[savedUser];
+      showDashboard();
+    }
+  };
+</script>
