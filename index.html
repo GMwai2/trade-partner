@@ -216,14 +216,41 @@ function showDashboard() {
   dash.classList.remove("hidden");
 
   if (user.isAdmin) {
-    dash.innerHTML = `
-      <h2>Admin Dashboard</h2>
-      <p>Welcome, ${user.name}</p>
-      <p><strong>Wallet:</strong> ${user.walletNumber} | ${user.balance} ${user.currency}</p>
-      <button onclick="logout()">Logout</button>
-    `;
-    return;
-  }
+  dash.innerHTML = `
+    <h2>Admin Dashboard</h2>
+    <p>Welcome, ${user.name}</p>
+    <p><strong>Wallet:</strong> ${user.walletNumber} | ${user.balance} ${user.currency}</p>
+
+    <h3>Registered Users</h3>
+    <ul>
+      ${Object.entries(users).map(([username, u]) => `
+        <li>
+          <strong>${u.name}</strong> (${u.walletNumber}) - ${u.balance} ${u.currency}
+        </li>`).join('')}
+    </ul>
+
+    <h3>Create Sub-Admin</h3>
+    <input type="text" id="subName" placeholder="Name">
+    <input type="email" id="subEmail" placeholder="Email">
+    <input type="password" id="subPass" placeholder="Password">
+    <input type="text" id="subPin" placeholder="4-digit PIN">
+    <select id="subCurrency">
+      <option value="KES">KES</option>
+      <option value="USD">USD</option>
+      <option value="JPY">JPY</option>
+    </select>
+    <button onclick="createSubAdmin()">Create Sub-Admin</button>
+
+    <h3>Transaction Graphs</h3>
+    <canvas id="txGraph" width="400" height="200"></canvas>
+    <canvas id="chargeGraph" width="400" height="200"></canvas>
+
+    <br><button onclick="logout()">Logout</button>
+  `;
+  renderGraphs(); // draw graphs
+  return;
+}
+
 
   dash.innerHTML = `
     <h2>Wallet Dashboard</h2>
@@ -257,6 +284,39 @@ function fetchRecipientDetails() {
     document.getElementById("recipientDetails").classList.add("hidden");
   }
 }
+function createSubAdmin() {
+  const name = document.getElementById("subName").value.trim();
+  const email = document.getElementById("subEmail").value.trim();
+  const password = document.getElementById("subPass").value;
+  const pin = document.getElementById("subPin").value;
+  const currency = document.getElementById("subCurrency").value;
+  const username = name.toLowerCase().replace(/\s+/g, '');
+
+  if (!name || !email || !password || !pin) {
+    alert("Fill all fields.");
+    return;
+  }
+
+  if (users[username]) {
+    alert("Sub-admin already exists.");
+    return;
+  }
+
+  users[username] = {
+    name,
+    email,
+    password,
+    pin,
+    currency,
+    walletNumber: "GALA" + Math.floor(9000 + Math.random() * 1000),
+    balance: 0,
+    isAdmin: true
+  };
+
+  saveUsers();
+  alert("Sub-admin created.");
+  showDashboard();
+}
 
 let recentTransfers = [];
 
@@ -266,6 +326,39 @@ function initiateTransfer() {
   const recipientWallet = document.getElementById("recipientWallet").value.trim();
   const amount = parseFloat(document.getElementById("transferAmount").value);
   const pin = document.getElementById("pinCheck").value.trim();
+function createSubAdmin() {
+  const name = document.getElementById("subName").value.trim();
+  const email = document.getElementById("subEmail").value.trim();
+  const password = document.getElementById("subPass").value;
+  const pin = document.getElementById("subPin").value;
+  const currency = document.getElementById("subCurrency").value;
+  const username = name.toLowerCase().replace(/\s+/g, '');
+
+  if (!name || !email || !password || !pin) {
+    alert("Fill all fields.");
+    return;
+  }
+
+  if (users[username]) {
+    alert("Sub-admin already exists.");
+    return;
+  }
+
+  users[username] = {
+    name,
+    email,
+    password,
+    pin,
+    currency,
+    walletNumber: "GALA" + Math.floor(9000 + Math.random() * 1000),
+    balance: 0,
+    isAdmin: true
+  };
+
+  saveUsers();
+  alert("Sub-admin created.");
+  showDashboard();
+}
 
   if (!recipientWallet || isNaN(amount) || !pin) {
     alert("Fill all fields.");
@@ -315,7 +408,52 @@ window.onload = function () {
   if (loggedIn && users[loggedIn]) {
     showDashboard();
   }
-};
+}<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function renderGraphs() {
+  const txCanvas = document.getElementById("txGraph").getContext("2d");
+  const chargeCanvas = document.getElementById("chargeGraph").getContext("2d");
+
+  const currencyTotals = {};
+  const charges = {};
+
+  for (let u of Object.values(users)) {
+    if (!currencyTotals[u.currency]) {
+      currencyTotals[u.currency] = 0;
+      charges[u.currency] = 0;
+    }
+    currencyTotals[u.currency] += u.balance;
+    if (u.balance > 250) {
+      charges[u.currency] += Math.min(u.balance * 0.01, 1000);
+    }
+  }
+
+  new Chart(txCanvas, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(currencyTotals),
+      datasets: [{
+        label: 'Total Wallets per Currency',
+        data: Object.values(currencyTotals),
+        backgroundColor: '#007bff'
+      }]
+    }
+  });
+
+  new Chart(chargeCanvas, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(charges),
+      datasets: [{
+        label: 'Estimated Transaction Charges',
+        data: Object.values(charges),
+        backgroundColor: '#ff8800'
+      }]
+    }
+  });
+}
+</script>
+
 </script>
 
 </body>
