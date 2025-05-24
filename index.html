@@ -1,211 +1,187 @@
+<!-- Part 1: HTML + Initial JavaScript Setup -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Trade Partner Wallet</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    .container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      padding: 10px;
+      width: 100%;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .hidden { display: none; }
+  </style>
 </head>
 <body>
-  <h2>Login</h2>
-  <form id="loginForm">
-    <label>Username:</label><br>
-    <input type="text" id="username" required><br>
-    <label>Password:</label><br>
-    <input type="password" id="password" required><br><br>
-    <button type="submit">Login</button>
-  </form>
-
-  <p id="loginMessage"></p>
-  <div id="dashboard" style="display:none;">
-    <h3>Welcome, <span id="userName"></span>!</h3>
-    <p>Wallet ID: <span id="walletId"></span></p>
-    <p>Balances: <span id="userBalances"></span></p>
-
-    <h3>Send Money</h3>
-    <form id="transferForm">
-      <label>Recipient Username:</label><br>
-      <input type="text" id="recipient" required><br>
-      <label>Amount:</label><br>
-      <input type="number" id="amount" required><br>
-      <label>Currency:</label><br>
-      <select id="currency">
+  <div class="container" id="authContainer">
+    <h2>Trade Partner Wallet</h2>
+    <div id="loginForm">
+      <input type="text" id="loginUsername" placeholder="Username">
+      <input type="password" id="loginPassword" placeholder="Password">
+      <label><input type="checkbox" onclick="togglePassword()"> Show Password</label>
+      <button onclick="login()">Login</button>
+      <p>New user? <a href="#" onclick="toggleForms()">Register</a></p>
+    </div>
+    <div id="registerForm" class="hidden">
+      <input type="text" id="regName" placeholder="Full Name">
+      <input type="email" id="regEmail" placeholder="Email">
+      <input type="password" id="regPassword" placeholder="Password">
+      <input type="text" id="regPin" placeholder="4-digit PIN">
+      <select id="regCurrency">
         <option value="KES">KES</option>
         <option value="USD">USD</option>
         <option value="JPY">JPY</option>
-      </select><br><br>
-      <button type="submit">Transfer</button>
-    </form>
-    <p id="transferStatus"></p>
+      </select>
+      <button onclick="register()">Register</button>
+      <p>Already have an account? <a href="#" onclick="toggleForms()">Login</a></p>
+    </div>
   </div>
 
-<script>
-let users = {
-  kilush: {
-    name: "Kilush",
-    email: "kilush@example.com",
-    password: "kilush123",
-    pin: "1234",
-    walletId: "WAL1001",
-    balances: { KES: 1000 },
-    tx: [],
-    isAdmin: false,
-  },
-  schwadz: {
-    name: "Schwadz",
-    email: "schwadz@example.com",
-    password: "schwadz123",
-    pin: "1234",
-    walletId: "WAL1002",
-    balances: { USD: 6.4 },
-    tx: [],
-    isAdmin: false,
-  },
-  moses: {
-    name: "Moses",
-    email: "moses@example.com",
-    password: "moses123",
-    pin: "1234",
-    walletId: "WAL1003",
-    balances: { JPY: 1230 },
-    tx: [],
-    isAdmin: false,
-  },
-  admin: {
-    name: "Admin",
-    email: "admin@example.com",
-    password: "admin123",
-    pin: "0000",
-    isAdmin: true,
-    walletId: "ADMIN",
-    balances: { KES: 0, USD: 0, JPY: 0 },
-    tx: [],
-  },
-};
-
-const exchangeRates = {
-  KES: { USD: 0.0064, JPY: 1.23 },
-  USD: { KES: 155.3 },
-  JPY: { KES: 0.81 },
-};
-
-let currentUser = null;
-const txLog = [];
-const adminChargeWallet = { KES: 0, USD: 0, JPY: 0 };
-
-// Login logic
-document.getElementById("loginForm").addEventListener("submit", function(e) {
-  e.preventDefault();
-  const username = document.getElementById("username").value.toLowerCase();
-  const password = document.getElementById("password").value;
-
-  if (users[username] && users[username].password === password) {
-    currentUser = users[username];
-    document.getElementById("loginMessage").textContent = "Login successful!";
-    document.getElementById("dashboard").style.display = "block";
-    document.getElementById("userName").textContent = currentUser.name;
-    document.getElementById("walletId").textContent = currentUser.walletId;
-    document.getElementById("userBalances").textContent = JSON.stringify(currentUser.balances);
-  } else {
-    document.getElementById("loginMessage").textContent = "Invalid login credentials.";
-  }
-});
-
-// Transfer Logic
-document.getElementById("transferForm").addEventListener("submit", function(e) {
-  e.preventDefault();
-  const recipientName = document.getElementById("recipient").value.toLowerCase();
-  const amount = parseFloat(document.getElementById("amount").value);
-  const currency = document.getElementById("currency").value;
-  const sender = currentUser;
-
-  if (!users[recipientName]) {
-    document.getElementById("transferStatus").textContent = "Recipient not found.";
-    return;
-  }
-
-  if (recipientName === sender.name.toLowerCase()) {
-    document.getElementById("transferStatus").textContent = "Cannot transfer to yourself.";
-    return;
-  }
-
-  const now = Date.now();
-  const recentTx = sender.tx.find(tx =>
-    tx.to === recipientName &&
-    tx.amount === amount &&
-    tx.currency === currency &&
-    now - tx.time < 60000
-  );
-  if (recentTx) {
-    document.getElementById("transferStatus").textContent = "Duplicate transaction blocked.";
-    return;
-  }
-
-  const charge = Math.min(Math.ceil(amount * 0.01), 1000);
-  const totalDebit = amount + charge;
-
-  if (!sender.balances[currency] || sender.balances[currency] < totalDebit) {
-    document.getElementById("transferStatus").textContent = "Insufficient balance.";
-    return;
-  }
-
-  // Confirm transfer
-  const confirmSend = confirm(`Send ${amount} ${currency} to ${recipientName}?\nFee: ${charge} ${currency}`);
-  if (!confirmSend) return;
-
-  sender.balances[currency] -= totalDebit;
-  users[recipientName].balances[currency] = (users[recipientName].balances[currency] || 0) + amount;
-  adminChargeWallet[currency] += charge;
-
-  const txData = {
-    to: recipientName,
-    amount,
-    currency,
-    time: now,
-  };
-
-  sender.tx.push(txData);
-  users[recipientName].tx.push({
-    from: sender.name.toLowerCase(),
-    amount,
-    currency,
-    time: now,
-  });
-
-  document.getElementById("userBalances").textContent = JSON.stringify(sender.balances);
-  document.getElementById("transferStatus").textContent = "Transfer successful!";
-});
-</script>
-</body>
   <script>
-  function showDashboard() {
-    document.body.innerHTML = \`
-      <div class="container">
-        <h2>\${currentUser.name}'s Dashboard</h2>
-        <p>Wallet ID: \${currentUser.walletId}</p>
-        <p>Balances:</p>
-        <ul>
-          \${Object.entries(currentUser.balances).map(([cur, val]) => '<li>' + cur + ': ' + val + '</li>').join('')}
-        </ul>
-        <button onclick="logout()">Logout</button>
-      </div>
-    \`;
-  }
+    let users = {
+      kilush: {
+        name: "Kilush",
+        email: "kilush@example.com",
+        password: "kilush123",
+        pin: "1234",
+        walletId: "WAL1001",
+        balances: { KES: 1000 },
+        tx: [],
+        isAdmin: false,
+      },
+      schwadz: {
+        name: "Schwadz",
+        email: "schwadz@example.com",
+        password: "schwadz123",
+        pin: "1234",
+        walletId: "WAL1002",
+        balances: { USD: 6.4 },
+        tx: [],
+        isAdmin: false,
+      },
+      moses: {
+        name: "Moses",
+        email: "moses@example.com",
+        password: "moses123",
+        pin: "1234",
+        walletId: "WAL1003",
+        balances: { JPY: 1230 },
+        tx: [],
+        isAdmin: false,
+      },
+      admin: {
+        name: "Admin",
+        email: "admin@example.com",
+        password: "admin123",
+        pin: "0000",
+        isAdmin: true,
+        walletId: "ADMIN",
+        balances: { KES: 0, USD: 0, JPY: 0 },
+        tx: [],
+      },
+    };
 
-  function logout() {
-    currentUser = null;
-    location.reload();
-  }
+    let currentUser = null;
+    const exchangeRates = {
+      KES: { USD: 0.0064, JPY: 1.23 },
+      USD: { KES: 155.3 },
+      JPY: { KES: 0.81 },
+    };
+    const txLog = [];
+    const adminChargeWallet = { KES: 0, USD: 0, JPY: 0 };
 
-  // Updated login to go to dashboard
-  function login() {
-    const username = document.getElementById("loginUsername").value.toLowerCase();
-    const password = document.getElementById("loginPassword").value;
-
-    if (validateCredentials(username, password)) {
-      currentUser = users[username];
-      showDashboard();
-    } else {
-      alert("Invalid login credentials");
+    function generateWalletID() {
+      return "WAL" + Math.floor(Math.random() * 100000);
     }
-  }
-</script>
 
+    function validateCredentials(username, password) {
+      return users[username] && users[username].password === password;
+    }
+
+    function togglePassword() {
+      const pwd = document.getElementById("loginPassword");
+      pwd.type = pwd.type === "password" ? "text" : "password";
+    }
+
+    function toggleForms() {
+      document.getElementById("loginForm").classList.toggle("hidden");
+      document.getElementById("registerForm").classList.toggle("hidden");
+    }
+
+    function register() {
+      const name = document.getElementById("regName").value;
+      const email = document.getElementById("regEmail").value;
+      const password = document.getElementById("regPassword").value;
+      const pin = document.getElementById("regPin").value;
+      const preferredCurrency = document.getElementById("regCurrency").value;
+      const username = name.toLowerCase();
+
+      if (users[username]) {
+        alert("Username already exists!");
+        return;
+      }
+
+      const walletId = generateWalletID();
+      users[username] = {
+        name,
+        email,
+        password,
+        pin,
+        walletId,
+        balances: { [preferredCurrency]: 1000 },
+        tx: [],
+        isAdmin: false,
+      };
+      alert("Registration successful. You can now log in.");
+      toggleForms();
+    }
+
+    function login() {
+      const username = document.getElementById("loginUsername").value.toLowerCase();
+      const password = document.getElementById("loginPassword").value;
+
+      if (validateCredentials(username, password)) {
+        currentUser = users[username];
+        alert("Login successful");
+        // Placeholder for dashboard display
+        document.body.innerHTML = "<h1>Welcome " + currentUser.name + "</h1>";
+      } else {
+        alert("Invalid login credentials");
+      }
+    }
+  </script>
+</body>
 </html>
