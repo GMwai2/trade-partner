@@ -292,7 +292,7 @@ function submitTransfer() {
   const recipientIndex = allUsers.findIndex(u => u.walletNumber === confirmedRecipient.walletNumber);
 
   // Check sufficient balance
-  let charge = amount > 250 ? Math.min(amount * 0.01, 1000) : 0;
+  let charge = amount > 200 ? Math.min(amount * 0.0075, 1000) : 0;
   const totalDebit = amount + charge;
 
   if (allUsers[senderIndex].walletBalance < totalDebit) {
