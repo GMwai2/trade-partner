@@ -246,21 +246,37 @@
 let loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
 let allUsers = JSON.parse(localStorage.getItem('users')) || [];
 
-function validateRecipient() {
-  const recipientInput = document.getElementById('recipientAccount').value.trim();
-  const display = document.getElementById('recipientNameDisplay');
-  confirmedRecipient = allUsers.find(u => u.walletNumber === recipientInput && u.walletNumber !== loggedInUser.walletNumber);
+function checkRecipientDetails() {
+  const recipient = document.getElementById("transferRecipient").value.trim();
+  const amount = parseFloat(document.getElementById("transferAmount").value);
+  const users = JSON.parse(localStorage.getItem("users")) || [];
 
-  if (confirmedRecipient) {
-    display.textContent = "Confirm Recipient: " + confirmedRecipient.name;
-    document.getElementById('pinField').disabled = false;
+  const pinField = document.getElementById("transferPin");
+  const sendBtn = document.getElementById("sendButton");
+  const confirmDiv = document.getElementById("recipientConfirm");
+
+  // Basic checks
+  if (!recipient || isNaN(amount) || amount <= 0) {
+    confirmDiv.innerHTML = `<p style="color:red;">Enter valid recipient and amount.</p>`;
+    pinField.disabled = true;
+    sendBtn.disabled = true;
+    return;
+  }
+
+  // Check if recipient exists
+  const found = users.find(user => user.username === recipient);
+
+  if (found) {
+    confirmDiv.innerHTML = `<p style="color:green;">Recipient found: <strong>${found.fullName || found.username}</strong></p>`;
+    pinField.disabled = false;
+    sendBtn.disabled = false;
   } else {
-    display.textContent = "Recipient not found or same as sender.";
-    confirmedRecipient = null;
-    document.getElementById('pinField').disabled = true;
-    document.getElementById('sendButton').disabled = true;
+    confirmDiv.innerHTML = `<p style="color:red;">Recipient not found. Please check the account number.</p>`;
+    pinField.disabled = true;
+    sendBtn.disabled = true;
   }
 }
+
 
 function checkPinEntered() {
   const pin = document.getElementById('pinField').value;
