@@ -174,4 +174,38 @@ document.getElementById("transferForm").addEventListener("submit", function(e) {
 });
 </script>
 </body>
+  <script>
+  function showDashboard() {
+    document.body.innerHTML = \`
+      <div class="container">
+        <h2>\${currentUser.name}'s Dashboard</h2>
+        <p>Wallet ID: \${currentUser.walletId}</p>
+        <p>Balances:</p>
+        <ul>
+          \${Object.entries(currentUser.balances).map(([cur, val]) => '<li>' + cur + ': ' + val + '</li>').join('')}
+        </ul>
+        <button onclick="logout()">Logout</button>
+      </div>
+    \`;
+  }
+
+  function logout() {
+    currentUser = null;
+    location.reload();
+  }
+
+  // Updated login to go to dashboard
+  function login() {
+    const username = document.getElementById("loginUsername").value.toLowerCase();
+    const password = document.getElementById("loginPassword").value;
+
+    if (validateCredentials(username, password)) {
+      currentUser = users[username];
+      showDashboard();
+    } else {
+      alert("Invalid login credentials");
+    }
+  }
+</script>
+
 </html>
