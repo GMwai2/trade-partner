@@ -206,16 +206,16 @@
           ${Object.entries(currentUser.balances).map(([cur, amt]) => `<li>${cur}: ${amt}</li>`).join('')}
         </ul>
 
-        <h3>Transfer Money</h3>
-        <input type="text" id="recipient" placeholder="Recipient Username" />
-        <input type="number" id="amount" placeholder="Amount" />
-        <select id="currency">
-          <option value="KES">KES</option>
-          <option value="USD">USD</option>
-          <option value="JPY">JPY</option>
-        </select>
-        <input type="password" id="txPin" placeholder="Enter PIN to Authorize" />
-        <button onclick="confirmTransfer()">Send</button>
+       <h3>Transfer Money</h3>
+<input type="text" id="transferRecipient" placeholder="Recipient Account Number"><br><br>
+<input type="number" id="transferAmount" placeholder="Amount to Send"><br><br>
+<button onclick="checkRecipientDetails()">Check Recipient</button><br><br>
+
+<div id="recipientConfirm"></div><br>
+
+<input type="password" id="transferPin" placeholder="Enter PIN to Authorize" disabled><br><br>
+<button id="sendButton" onclick="initiateTransfer()" disabled>Send</button>
+
 
         <br/><br/>
         <button onclick="logout()">Logout</button>
