@@ -1,5 +1,42 @@
-// app.js - Main Logic for Trade Partner Wallet Platform
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Trade Partner Wallet</title>
+</head>
+<body>
+  <h2>Login</h2>
+  <form id="loginForm">
+    <label>Username:</label><br>
+    <input type="text" id="username" required><br>
+    <label>Password:</label><br>
+    <input type="password" id="password" required><br><br>
+    <button type="submit">Login</button>
+  </form>
 
+  <p id="loginMessage"></p>
+  <div id="dashboard" style="display:none;">
+    <h3>Welcome, <span id="userName"></span>!</h3>
+    <p>Wallet ID: <span id="walletId"></span></p>
+    <p>Balances: <span id="userBalances"></span></p>
+
+    <h3>Send Money</h3>
+    <form id="transferForm">
+      <label>Recipient Username:</label><br>
+      <input type="text" id="recipient" required><br>
+      <label>Amount:</label><br>
+      <input type="number" id="amount" required><br>
+      <label>Currency:</label><br>
+      <select id="currency">
+        <option value="KES">KES</option>
+        <option value="USD">USD</option>
+        <option value="JPY">JPY</option>
+      </select><br><br>
+      <button type="submit">Transfer</button>
+    </form>
+    <p id="transferStatus"></p>
+  </div>
+
+<script>
 let users = {
   kilush: {
     name: "Kilush",
@@ -43,40 +80,98 @@ let users = {
   },
 };
 
-let currentUser = null;
 const exchangeRates = {
   KES: { USD: 0.0064, JPY: 1.23 },
   USD: { KES: 155.3 },
   JPY: { KES: 0.81 },
 };
+
+let currentUser = null;
 const txLog = [];
 const adminChargeWallet = { KES: 0, USD: 0, JPY: 0 };
 
-// Utility functions
-function generateWalletID() {
-  return "WAL" + Math.floor(Math.random() * 100000);
-}
+// Login logic
+document.getElementById("loginForm").addEventListener("submit", function(e) {
+  e.preventDefault();
+  const username = document.getElementById("username").value.toLowerCase();
+  const password = document.getElementById("password").value;
 
-function validateCredentials(username, password) {
-  return users[username] && users[username].password === password;
-}
+  if (users[username] && users[username].password === password) {
+    currentUser = users[username];
+    document.getElementById("loginMessage").textContent = "Login successful!";
+    document.getElementById("dashboard").style.display = "block";
+    document.getElementById("userName").textContent = currentUser.name;
+    document.getElementById("walletId").textContent = currentUser.walletId;
+    document.getElementById("userBalances").textContent = JSON.stringify(currentUser.balances);
+  } else {
+    document.getElementById("loginMessage").textContent = "Invalid login credentials.";
+  }
+});
 
-function registerUser(name, email, password, pin, preferredCurrency) {
-  const username = name.toLowerCase();
-  if (users[username]) return false;
+// Transfer Logic
+document.getElementById("transferForm").addEventListener("submit", function(e) {
+  e.preventDefault();
+  const recipientName = document.getElementById("recipient").value.toLowerCase();
+  const amount = parseFloat(document.getElementById("amount").value);
+  const currency = document.getElementById("currency").value;
+  const sender = currentUser;
 
-  const walletId = generateWalletID();
-  users[username] = {
-    name,
-    email,
-    password,
-    pin,
-    walletId,
-    balances: { [preferredCurrency]: 1000 },
-    tx: [],
-    isAdmin: false,
+  if (!users[recipientName]) {
+    document.getElementById("transferStatus").textContent = "Recipient not found.";
+    return;
+  }
+
+  if (recipientName === sender.name.toLowerCase()) {
+    document.getElementById("transferStatus").textContent = "Cannot transfer to yourself.";
+    return;
+  }
+
+  const now = Date.now();
+  const recentTx = sender.tx.find(tx =>
+    tx.to === recipientName &&
+    tx.amount === amount &&
+    tx.currency === currency &&
+    now - tx.time < 60000
+  );
+  if (recentTx) {
+    document.getElementById("transferStatus").textContent = "Duplicate transaction blocked.";
+    return;
+  }
+
+  const charge = Math.min(Math.ceil(amount * 0.01), 1000);
+  const totalDebit = amount + charge;
+
+  if (!sender.balances[currency] || sender.balances[currency] < totalDebit) {
+    document.getElementById("transferStatus").textContent = "Insufficient balance.";
+    return;
+  }
+
+  // Confirm transfer
+  const confirmSend = confirm(`Send ${amount} ${currency} to ${recipientName}?\nFee: ${charge} ${currency}`);
+  if (!confirmSend) return;
+
+  sender.balances[currency] -= totalDebit;
+  users[recipientName].balances[currency] = (users[recipientName].balances[currency] || 0) + amount;
+  adminChargeWallet[currency] += charge;
+
+  const txData = {
+    to: recipientName,
+    amount,
+    currency,
+    time: now,
   };
-  return true;
-}
 
-// More functions (like transfer money, show admin stats, OTP verification, water wall etc.) will follow in the next part.
+  sender.tx.push(txData);
+  users[recipientName].tx.push({
+    from: sender.name.toLowerCase(),
+    amount,
+    currency,
+    time: now,
+  });
+
+  document.getElementById("userBalances").textContent = JSON.stringify(sender.balances);
+  document.getElementById("transferStatus").textContent = "Transfer successful!";
+});
+</script>
+</body>
+</html>
