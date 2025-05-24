@@ -307,19 +307,26 @@ function showDashboard() {
     return;
   }
 
-  // Normal User
-  document.getElementById("dashboard").innerHTML = `
-    <h2>Wallet Dashboard</h2>
-    <p><strong>Name:</strong> ${user.name}</p>
-    <p><strong>Wallet Number:</strong> ${user.walletNumber}</p>
-    <p><strong>Balance:</strong> ${user.balance} ${user.currency}</p>
-    <button onclick="logout()">Logout</button>
+// Normal User
+document.getElementById("dashboard").innerHTML = `
+  <h2>Wallet Dashboard</h2>
+  <p><strong>Name:</strong> ${user.name}</p>
+  <p><strong>Wallet Number:</strong> ${user.walletNumber}</p>
+  <p><strong>Balance:</strong> ${user.balance} ${user.currency}</p>
+  <button onclick="logout()">Logout</button>
 
-    <h3>Transfer Money</h3>
-    <input type="text" id="recipientWallet" placeholder="Recipient Wallet Number"><br>
-    <input type="number" id="transferAmount" placeholder="Amount"><br>
-    <input type="password" id="pinCheck" placeholder="Enter PIN"><br>
-    <button onclick="initiateTransfer()">Send</button>
+  <h3>Transfer Money</h3>
+  <input type="text" id="recipientWallet" placeholder="Recipient Wallet Number" onblur="fetchRecipientDetails()"><br>
+  <div id="recipientDetails" style="display:none; margin-bottom: 10px; border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
+    <p><strong>Name:</strong> <span id="recName"></span></p>
+    <p><strong>Email:</strong> <span id="recEmail"></span></p>
+    <p><strong>Currency:</strong> <span id="recCurrency"></span></p>
+  </div>
+  <input type="number" id="transferAmount" placeholder="Amount"><br>
+  <input type="password" id="pinCheck" placeholder="Enter PIN to Confirm"><br>
+  <button onclick="initiateTransfer()">Send</button>
+`;
+
   `;
 }
 
@@ -358,3 +365,16 @@ function initiateTransfer() {
   );
 
   if (duplicate)
+function fetchRecipientDetails() {
+  const walletNum = document.getElementById("recipientWallet").value.trim();
+  const recipient = Object.values(users).find(u => u.walletNumber === walletNum);
+
+  if (recipient) {
+    document.getElementById("recName").textContent = recipient.name;
+    document.getElementById("recEmail").textContent = recipient.email;
+    document.getElementById("recCurrency").textContent = recipient.currency;
+    document.getElementById("recipientDetails").style.display = "block";
+  } else {
+    document.getElementById("recipientDetails").style.display = "none";
+  }
+}
