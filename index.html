@@ -164,23 +164,52 @@
       alert("Registration successful. You can now log in.");
       toggleForms();
     }
+    function login() {function showDashboard() {
+  document.body.innerHTML = `
+    <div class="container">
+      <h2>Welcome, ${currentUser.name}</h2>
+      <p><strong>Wallet ID:</strong> ${currentUser.walletId}</p>
+      <p><strong>Your Balances:</strong></p>
+      <ul>
+        ${Object.entries(currentUser.balances).map(([cur, amt]) => `<li>${cur}: ${amt}</li>`).join('')}
+      </ul>
 
-    function login() {
-      const username = document.getElementById("loginUsername").value.toLowerCase();
-      const password = document.getElementById("loginPassword").value;
+      <h3>Transfer Money</h3>
+      <input type="text" id="recipient" placeholder="Recipient Username" />
+      <input type="number" id="amount" placeholder="Amount" />
+      <select id="currency">
+        <option value="KES">KES</option>
+        <option value="USD">USD</option>
+        <option value="JPY">JPY</option>
+      </select>
+      <input type="password" id="txPin" placeholder="Enter PIN to Authorize" />
+      <button onclick="confirmTransfer()">Send</button>
 
-      if (validateCredentials(username, password)) {
-        currentUser = users[username];
-        showDashboard();
-      } else {
-        alert("Invalid login credentials");
-      }
-    }
+      <br/><br/>
+      <button onclick="logout()">Logout</button>
+    </div>
+  `;
+}
 
-    function logout() {
-      currentUser = null;
-      location.reload();
-    }
+     function login() {
+  const username = document.getElementById("loginUsername").value.toLowerCase();
+  const password = document.getElementById("loginPassword").value;
+
+  if (validateCredentials(username, password)) {
+    currentUser = users[username];
+    localStorage.setItem("loggedInUser", username);  // persist session
+    showDashboard();
+  } else {
+    alert("Invalid login credentials");
+  }
+}
+
+
+   function logout() {
+  localStorage.removeItem("loggedInUser");
+  location.reload();
+}
+
 
     function showDashboard() {
       document.body.innerHTML = \`
@@ -199,3 +228,43 @@
   </script>
 </body>
 </html>
+window.onload = () => {
+  const savedUser = localStorage.getItem("loggedInUser");
+  if (savedUser && users[savedUser]) {
+    currentUser = users[savedUser];
+    showDashboard();
+  }
+};
+function confirmTransfer() {
+  const recipientName = document.getElementById("recipient").value.toLowerCase();
+  const amount = parseFloat(document.getElementById("amount").value);
+  const currency = document.getElementById("currency").value;
+  const enteredPin = document.getElementById("txPin").value;
+
+  if (!users[recipientName]) {
+    alert("Recipient not found!");
+    return;
+  }
+
+  if (enteredPin !== currentUser.pin) {
+    alert("Incorrect PIN!");
+    return;
+  }
+
+  if (!currentUser.balances[currency] || currentUser.balances[currency] < amount) {
+    alert("Insufficient funds!");
+    return;
+  }
+
+  // Proceed with transaction
+  currentUser.balances[currency] -= amount;
+  if (!users[recipientName].balances[currency]) {
+    users[recipientName].balances[currency] = 0;
+  }
+  users[recipientName].balances[currency] += amount;
+
+  currentUser.tx.push(`Sent ${amount} ${currency} to ${recipientName}`);
+  users[recipientName].tx.push(`Received ${amount} ${currency} from ${currentUser.name}`);
+  alert("Transfer successful!");
+  showDashboard();
+}
