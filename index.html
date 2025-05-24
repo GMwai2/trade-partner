@@ -235,7 +235,29 @@ p {
     toggleForms();
   }
 
-  function login() {
+  function loginUser() {
+  const loginEmail = document.getElementById("loginEmail").value.trim();
+  const loginPassword = document.getElementById("loginPassword").value.trim();
+
+  const users = JSON.parse(localStorage.getItem("users") || "[]");
+  const admin = JSON.parse(localStorage.getItem("admin") || "{}");
+
+  if (loginEmail === admin.email && loginPassword === admin.password) {
+    localStorage.setItem("loggedInUser", "admin");
+    window.location.reload();
+    return;
+  }
+
+  const user = users.find(u => u.email === loginEmail && u.password === loginPassword);
+
+  if (user) {
+    localStorage.setItem("loggedInUser", user.email);
+    window.location.reload();
+  } else {
+    alert("Invalid email or password. Please try again.");
+  }
+}
+
     const username = document.getElementById("loginUsername").value.trim().toLowerCase();
     const password = document.getElementById("loginPassword").value;
 
