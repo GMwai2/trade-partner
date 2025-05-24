@@ -88,3 +88,179 @@
       <p>Already have an account? <a href="#" onclick="toggleForms()">Login</a></p>
     </div>
   </div>
+<script>
+  // Store users in localStorage or fallback
+  let users = JSON.parse(localStorage.getItem("users")) || {
+    "kilush": {
+      name: "Kilush",
+      email: "kilush@example.com",
+      password: "pass123",
+      pin: "1234",
+      currency: "KES",
+      walletNumber: "GALA1001",
+      balance: 5000,
+      isAdmin: false
+    },
+    "admin": {
+      name: "Main Admin",
+      email: "admin@galakia.com",
+      password: "adminpass",
+      pin: "0000",
+      currency: "KES",
+      walletNumber: "GALA9999",
+      balance: 1000000,
+      isAdmin: true
+    }
+  };
+
+  function saveUsers() {
+    localStorage.setItem("users", JSON.stringify(users));
+  }
+
+  function toggleForms() {
+    document.getElementById("loginForm").classList.toggle("hidden");
+    document.getElementById("registerForm").classList.toggle("hidden");
+  }
+
+  function togglePassword() {
+    const input = document.getElementById("loginPassword");
+    input.type = input.type === "password" ? "text" : "password";
+  }
+
+  function register() {
+    const name = document.getElementById("regName").value.trim();
+    const email = document.getElementById("regEmail").value.trim();
+    const password = document.getElementById("regPassword").value;
+    const pin = document.getElementById("regPin").value.trim();
+    const currency = document.getElementById("regCurrency").value;
+    const username = name.toLowerCase().replace(/\s+/g, '');
+
+    if (!name || !email || !password || !pin || !currency) {
+      alert("Please fill in all fields.");
+      return;
+    }
+
+    if (users[username]) {
+      alert("Username already exists. Try logging in.");
+      return;
+    }
+
+    const walletNumber = "GALA" + Math.floor(1000 + Math.random() * 9000);
+
+    users[username] = {
+      name,
+      email,
+      password,
+      pin,
+      currency,
+      walletNumber,
+      balance: 0,
+      isAdmin: false
+    };
+
+    saveUsers();
+    alert("Registration successful! You can now login.");
+    toggleForms();
+  }
+
+  function login() {
+    const username = document.getElementById("loginUsername").value.trim().toLowerCase();
+    const password = document.getElementById("loginPassword").value;
+
+    const user = users[username];
+
+    if (!user || user.password !== password) {
+      alert("Invalid username or password.");
+      return;
+    }
+
+    sessionStorage.setItem("loggedInUser", username);
+    showDashboard();
+  }
+
+  function logout() {
+    sessionStorage.removeItem("loggedInUser");
+    location.reload();
+  }
+
+  window.onload = function() {
+    const username = sessionStorage.getItem("loggedInUser");
+    if (username && users[username]) {
+      showDashboard();
+    }
+  };
+</script>
+<script>
+// --- CONTINUATION ---
+
+function showDashboard() {
+  const username = sessionStorage.getItem("loggedInUser");
+  const user = users[username];
+  if (!user) return;
+
+  document.getElementById("loginRegisterContainer").classList.add("hidden");
+  document.getElementById("dashboard").classList.remove("hidden");
+
+  // If Admin
+  if (user.isAdmin) {
+    document.getElementById("dashboard").innerHTML = `
+      <h2>Admin Dashboard</h2>
+      <p>Welcome, ${user.name}</p>
+      <p><strong>Trading Wallet:</strong> ${user.balance} ${user.currency}</p>
+      <p>Transaction & Graphs (Coming soon)</p>
+      <button onclick="logout()">Logout</button>
+    `;
+    return;
+  }
+
+  // Normal User
+  document.getElementById("dashboard").innerHTML = `
+    <h2>Wallet Dashboard</h2>
+    <p><strong>Name:</strong> ${user.name}</p>
+    <p><strong>Wallet Number:</strong> ${user.walletNumber}</p>
+    <p><strong>Balance:</strong> ${user.balance} ${user.currency}</p>
+    <button onclick="logout()">Logout</button>
+
+    <h3>Transfer Money</h3>
+    <input type="text" id="recipientWallet" placeholder="Recipient Wallet Number"><br>
+    <input type="number" id="transferAmount" placeholder="Amount"><br>
+    <input type="password" id="pinCheck" placeholder="Enter PIN"><br>
+    <button onclick="initiateTransfer()">Send</button>
+  `;
+}
+
+let recentTransfers = [];
+
+function initiateTransfer() {
+  const username = sessionStorage.getItem("loggedInUser");
+  const sender = users[username];
+  const recipientWallet = document.getElementById("recipientWallet").value.trim();
+  const amount = parseFloat(document.getElementById("transferAmount").value);
+  const enteredPin = document.getElementById("pinCheck").value.trim();
+
+  if (!recipientWallet || isNaN(amount) || !enteredPin) {
+    alert("Please fill all fields.");
+    return;
+  }
+
+  if (enteredPin !== sender.pin) {
+    alert("Incorrect PIN.");
+    return;
+  }
+
+  const recipient = Object.values(users).find(u => u.walletNumber === recipientWallet);
+
+  if (!recipient) {
+    alert("Recipient not found.");
+    return;
+  }
+
+  const now = Date.now();
+  const duplicate = recentTransfers.find(t =>
+    t.sender === username &&
+    t.recipient === recipientWallet &&
+    t.amount === amount &&
+    (now - t.time < 60000)
+  );
+
+  if (duplicate)
