@@ -10,15 +10,19 @@
     .box { background: white; padding: 20px; border-radius: 10px; max-width: 500px; margin: auto; }
     input, button { display: block; width: 100%; padding: 10px; margin: 10px 0; }
     .dashboard { max-width: 800px; margin: auto; }
+    .logout-btn { background-color: #f44336; color: white; }
   </style>
 </head>
 <body>
+
+  <!-- START PAGE -->
   <div id="startPage" class="box">
     <h2>Welcome to Wallet Platform</h2>
     <button onclick="showLogin()">Login</button>
     <button onclick="showRegister()">Register</button>
   </div>
 
+  <!-- LOGIN PAGE -->
   <div id="loginPage" class="box hidden">
     <h2>Login</h2>
     <input id="loginUsername" placeholder="Username" />
@@ -27,6 +31,7 @@
     <button onclick="showStart()">Back</button>
   </div>
 
+  <!-- REGISTER PAGE -->
   <div id="registerPage" class="box hidden">
     <h2>Register</h2>
     <input id="regSurname" placeholder="Surname" />
@@ -41,6 +46,7 @@
     <button onclick="showStart()">Back</button>
   </div>
 
+  <!-- USER DASHBOARD -->
   <div id="userDashboard" class="dashboard hidden">
     <h2>User Dashboard</h2>
     <div id="userInfo"></div>
@@ -50,13 +56,14 @@
     <button onclick="transfer()">Send Money</button>
     <h3>Transaction Log:</h3>
     <pre id="transactionLog"></pre>
-    <button onclick="logout()">Logout</button>
+    <button onclick="logout()" class="logout-btn">Logout</button>
   </div>
 
+  <!-- ADMIN DASHBOARD -->
   <div id="adminDashboard" class="dashboard hidden">
     <h2>Admin Dashboard</h2>
     <div id="adminView"></div>
-    <button onclick="logout()">Logout</button>
+    <button onclick="logout()" class="logout-btn">Logout</button>
   </div>
 
 <script>
@@ -64,17 +71,18 @@
     admin: { password: "admin123", pin: "0000", balance: 1000000, wallet: "ADM001", role: "admin", name: "Administrator" },
     kilush: { password: "pass123", pin: "1111", balance: 5000, wallet: "KIL001", role: "user", name: "Kilush Kamau" },
     schwadz: { password: "pass123", pin: "2222", balance: 7500, wallet: "SCH001", role: "user", name: "Schwadz M" },
-    moses: { password: "pass123", pin: "3333", balance: 3000, wallet: "MOS001", role: "user", name: "Moses L" },
+    moses: { password: "pass123", pin: "3333", balance: 3000, wallet: "MOS001", role: "user", name: "Moses L" }
   };
 
   const walletToUser = {};
-  for (let username in users) {
-    walletToUser[users[username].wallet] = username;
+  for (let u in users) {
+    walletToUser[users[u].wallet] = u;
   }
 
   let currentUser = null;
   let transactionLog = [];
 
+  // AUTO LOGIN IF SESSION EXISTS
   window.onload = () => {
     const saved = sessionStorage.getItem("loggedUser");
     if (saved && users[saved]) {
@@ -100,6 +108,10 @@
     document.getElementById("registerPage").classList.remove("hidden");
   }
 
+  function hideAll() {
+    document.querySelectorAll(".box, .dashboard").forEach(el => el.classList.add("hidden"));
+  }
+
   function login() {
     const username = document.getElementById("loginUsername").value.trim();
     const password = document.getElementById("loginPassword").value.trim();
@@ -123,17 +135,15 @@
     const pin = document.getElementById("regPin").value.trim();
 
     if (!surname || !first || !id || !phone || !email || !password || !pin) {
-      alert("All required fields must be filled.");
-      return;
+      return alert("All required fields must be filled.");
     }
 
     const username = id;
     if (users[username]) {
-      alert("User already exists.");
-      return;
+      return alert("User already exists.");
     }
 
-    const wallet = "USR" + Math.floor(Math.random() * 10000);
+    const wallet = "USR" + Math.floor(1000 + Math.random() * 9000);
     users[username] = {
       password,
       pin,
@@ -156,7 +166,7 @@
       document.getElementById("adminDashboard").classList.remove("hidden");
       let html = "<h3>All Users</h3><ul>";
       for (let u in users) {
-        html += `<li>${u} (${users[u].wallet}) - ${users[u].balance} KES</li>`;
+        html += `<li><b>${u}</b> - ${users[u].wallet} - ${users[u].balance} KES</li>`;
       }
       html += "</ul>";
       document.getElementById("adminView").innerHTML = html;
@@ -165,7 +175,7 @@
       document.getElementById("userInfo").innerHTML = `
         <b>Name:</b> ${user.name}<br>
         <b>Wallet:</b> ${user.wallet}<br>
-        <b>Balance:</b> ${user.balance} KES
+        <b>Balance:</b> ${user.balance.toFixed(2)} KES
       `;
       displayTransactionLog();
     }
@@ -184,19 +194,21 @@
     const pin = document.getElementById("confirmPin").value.trim();
 
     if (!walletToUser[recipientWallet]) return alert("Invalid wallet.");
+    if (recipientWallet === sender.wallet) return alert("Cannot send to your own wallet.");
     if (pin !== sender.pin) return alert("Incorrect PIN.");
-    if (isNaN(amount) || amount <= 0) return alert("Enter valid amount.");
+    if (isNaN(amount) || amount <= 0) return alert("Enter a valid amount.");
 
     const recipient = users[walletToUser[recipientWallet]];
     const now = Date.now();
     const last = sender.lastTx || 0;
 
+    // Block duplicate transfer in 1 minute
     if (now - last < 60000 && sender.lastDetails === `${recipientWallet}-${amount}`) {
-      return alert("Wait a minute before repeating the same transfer.");
+      return alert("Wait a minute before repeating this transfer.");
     }
 
     let fee = Math.min(Math.ceil(amount * 0.01), 1000);
-    if (sender.balance < amount + fee) return alert("Insufficient funds.");
+    if (sender.balance < amount + fee) return alert("Insufficient funds (amount + fee).");
 
     sender.balance -= amount + fee;
     recipient.balance += amount;
@@ -204,17 +216,13 @@
     sender.lastTx = now;
     sender.lastDetails = `${recipientWallet}-${amount}`;
 
-    transactionLog.push(`${sender.name} sent ${amount} KES to ${recipient.name}. Fee: ${fee}`);
+    transactionLog.push(`${sender.name} sent ${amount} KES to ${recipient.name}. Fee: ${fee} KES`);
     alert("Transfer successful!");
     showDashboard();
   }
 
   function displayTransactionLog() {
     document.getElementById("transactionLog").textContent = transactionLog.join("\n");
-  }
-
-  function hideAll() {
-    document.querySelectorAll(".box, .dashboard").forEach(div => div.classList.add("hidden"));
   }
 </script>
 </body>
