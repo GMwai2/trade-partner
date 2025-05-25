@@ -1,460 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Galakia Flow | Trade Partner Wallet</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f3f6f9;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 500px;
-      padding: 20px;
-      background: white;
-      margin-top: 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
-    }
-
-    h1, h2, h3 {
-      text-align: center;
-      color: #003366;
-    }
-
-    input, select {
-      width: 100%;
-      padding: 10px;
-      margin-top: 8px;
-      margin-bottom: 15px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 16px;
-    }
-
-    button {
-      width: 100%;
-      padding: 12px;
-      background-color: #007bff;
-      color: white;
-      font-size: 16px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #0056b3;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    #recipientDetails {
-      border: 1px solid #ccc;
-      padding: 10px;
-      border-radius: 5px;
-      margin-bottom: 10px;
-    }
-
-    .branding img {
-      width: 180px;
-      max-width: 90%;
-      margin-top: 30px;
-    }
-
-    .branding p {
-      color: #555;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Wallet Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding-top: 100px;
+        }
+        input {
+            display: block;
+            margin: 10px auto;
+            padding: 10px;
+            width: 250px;
+        }
+        button {
+            padding: 10px 20px;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
+    <h2>Login to Your Wallet</h2>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <div id="error" class="error"></div>
 
-  <div class="branding">
-    <img src="images/galakia_logo.png" alt="Galakia Flow Logo">
-    <h1>Welcome to Galakia Flow</h1>
-    <p>Seamless Wallet Transfers. No Borders. No USD Detours.</p>
-  </div>
+    <script>
+        // Prevent auto logout on refresh
+        window.onload = function() {
+            const user = localStorage.getItem('loggedInUser');
+            if (user) {
+                const parsedUser = JSON.parse(user);
+                if (parsedUser.email === 'admin@wallet.com') {
+                    window.location.href = 'admin-dashboard.html';
+                } else {
+                    window.location.href = 'dashboard.html';
+                }
+            }
+        }
 
-  <div class="container" id="authContainer">
-    <h2>Trade Partner Wallet</h2>
+        function login() {
+            const email = document.getElementById('email').value.trim().toLowerCase();
+            const password = document.getElementById('password').value.trim();
+            const errorDiv = document.getElementById('error');
 
-    <div id="loginForm">
-      <input type="text" id="loginUsername" placeholder="Username">
-      <input type="password" id="loginPassword" placeholder="Password">
-      <label><input type="checkbox" onclick="togglePassword()"> Show Password</label>
-      <button onclick="login()">Login</button>
-      <p>New user? <a href="#" onclick="toggleForms()">Register</a></p>
-    </div>
+            // Clear previous error
+            errorDiv.textContent = '';
 
-    <div id="registerForm" class="hidden">
-      <input type="text" id="regName" placeholder="Full Name">
-      <input type="email" id="regEmail" placeholder="Email">
-      <input type="password" id="regPassword" placeholder="Password">
-      <input type="text" id="regPin" placeholder="4-digit PIN">
-      <select id="regCurrency">
-        <option value="KES">KES</option>
-        <option value="USD">USD</option>
-        <option value="JPY">JPY</option>
-      </select>
-      <button onclick="register()">Register</button>
-      <p>Already have an account? <a href="#" onclick="toggleForms()">Login</a></p>
-    </div>
-  </div>
+            // Check admin login
+            if (email === 'admin@wallet.com' && password === 'admin123') {
+                localStorage.setItem('loggedInUser', JSON.stringify({ email }));
+                window.location.href = 'admin-dashboard.html';
+                return;
+            }
 
-  <div class="container hidden" id="dashboard"></div>
+            // Check registered users
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            const user = users.find(u => u.email === email && u.password === password);
 
-<script>
-let users = JSON.parse(localStorage.getItem("users")) || {
-  "kilush": {
-    name: "Kilush",
-    email: "kilush@example.com",
-    password: "pass123",
-    pin: "1234",
-    currency: "KES",
-    walletNumber: "GALA1001",
-    balance: 5000,
-    isAdmin: false
-  },
-  "admin": {
-    name: "Main Admin",
-    email: "admin@galakia.com",
-    password: "adminpass",
-    pin: "0000",
-    currency: "KES",
-    walletNumber: "GALA9999",
-    balance: 1000000,
-    isAdmin: true
-  }
-};
-
-function saveUsers() {
-  localStorage.setItem("users", JSON.stringify(users));
-}
-
-function toggleForms() {
-  document.getElementById("loginForm").classList.toggle("hidden");
-  document.getElementById("registerForm").classList.toggle("hidden");
-}
-
-function togglePassword() {
-  const input = document.getElementById("loginPassword");
-  input.type = input.type === "password" ? "text" : "password";
-}
-
-function register() {
-  const name = document.getElementById("regName").value.trim();
-  const email = document.getElementById("regEmail").value.trim();
-  const password = document.getElementById("regPassword").value;
-  const pin = document.getElementById("regPin").value.trim();
-  const currency = document.getElementById("regCurrency").value;
-  const username = name.toLowerCase().replace(/\s+/g, '');
-
-  if (!name || !email || !password || !pin || !currency) {
-    alert("Please fill in all fields.");
-    return;
-  }
-
-  if (users[username]) {
-    alert("Username already exists.");
-    return;
-  }
-
-  const walletNumber = "GALA" + Math.floor(1000 + Math.random() * 9000);
-
-  users[username] = {
-    name,
-    email,
-    password,
-    pin,
-    currency,
-    walletNumber,
-    balance: 0,
-    isAdmin: false
-  };
-
-  saveUsers();
-  alert("Registration successful!");
-  toggleForms();
-}
-
-function login() {
-  const username = document.getElementById("loginUsername").value.trim().toLowerCase();
-  const password = document.getElementById("loginPassword").value;
-  const user = users[username];
-
-  if (!user || user.password !== password) {
-    alert("Invalid username or password.");
-    return;
-  }
-
-  sessionStorage.setItem("loggedInUser", username);
-  showDashboard();
-}
-
-function logout() {
-  sessionStorage.removeItem("loggedInUser");
-  location.reload();
-}
-
-function showDashboard() {
-  const username = sessionStorage.getItem("loggedInUser");
-  const user = users[username];
-  if (!user) return;
-
-  document.getElementById("authContainer").classList.add("hidden");
-  const dash = document.getElementById("dashboard");
-  dash.classList.remove("hidden");
-
-  if (user.isAdmin) {
-  dash.innerHTML = `
-    <h2>Admin Dashboard</h2>
-    <p>Welcome, ${user.name}</p>
-    <p><strong>Wallet:</strong> ${user.walletNumber} | ${user.balance} ${user.currency}</p>
-
-    <h3>Registered Users</h3>
-    <ul>
-      ${Object.entries(users).map(([username, u]) => `
-        <li>
-          <strong>${u.name}</strong> (${u.walletNumber}) - ${u.balance} ${u.currency}
-        </li>`).join('')}
-    </ul>
-
-    <h3>Create Sub-Admin</h3>
-    <input type="text" id="subName" placeholder="Name">
-    <input type="email" id="subEmail" placeholder="Email">
-    <input type="password" id="subPass" placeholder="Password">
-    <input type="text" id="subPin" placeholder="4-digit PIN">
-    <select id="subCurrency">
-      <option value="KES">KES</option>
-      <option value="USD">USD</option>
-      <option value="JPY">JPY</option>
-    </select>
-    <button onclick="createSubAdmin()">Create Sub-Admin</button>
-
-    <h3>Transaction Graphs</h3>
-    <canvas id="txGraph" width="400" height="200"></canvas>
-    <canvas id="chargeGraph" width="400" height="200"></canvas>
-
-    <br><button onclick="logout()">Logout</button>
-  `;
-  renderGraphs(); // draw graphs
-  return;
-}
-
-
-  dash.innerHTML = `
-    <h2>Wallet Dashboard</h2>
-    <p><strong>Name:</strong> ${user.name}</p>
-    <p><strong>Wallet Number:</strong> ${user.walletNumber}</p>
-    <p><strong>Balance:</strong> ${user.balance} ${user.currency}</p>
-    <button onclick="logout()">Logout</button>
-    <h3>Transfer Money</h3>
-    <input type="text" id="recipientWallet" placeholder="Recipient Wallet Number" onblur="fetchRecipientDetails()">
-    <div id="recipientDetails" class="hidden">
-      <p><strong>Name:</strong> <span id="recName"></span></p>
-      <p><strong>Email:</strong> <span id="recEmail"></span></p>
-      <p><strong>Currency:</strong> <span id="recCurrency"></span></p>
-    </div>
-    <input type="number" id="transferAmount" placeholder="Amount">
-    <input type="password" id="pinCheck" placeholder="Enter PIN to Confirm">
-    <button onclick="initiateTransfer()">Send</button>
-  `;
-}
-
-function fetchRecipientDetails() {
-  const walletNum = document.getElementById("recipientWallet").value.trim();
-  const recipient = Object.values(users).find(u => u.walletNumber === walletNum);
-
-  if (recipient) {
-    document.getElementById("recName").textContent = recipient.name;
-    document.getElementById("recEmail").textContent = recipient.email;
-    document.getElementById("recCurrency").textContent = recipient.currency;
-    document.getElementById("recipientDetails").classList.remove("hidden");
-  } else {
-    document.getElementById("recipientDetails").classList.add("hidden");
-  }
-}
-function createSubAdmin() {
-  const name = document.getElementById("subName").value.trim();
-  const email = document.getElementById("subEmail").value.trim();
-  const password = document.getElementById("subPass").value;
-  const pin = document.getElementById("subPin").value;
-  const currency = document.getElementById("subCurrency").value;
-  const username = name.toLowerCase().replace(/\s+/g, '');
-
-  if (!name || !email || !password || !pin) {
-    alert("Fill all fields.");
-    return;
-  }
-
-  if (users[username]) {
-    alert("Sub-admin already exists.");
-    return;
-  }
-
-  users[username] = {
-    name,
-    email,
-    password,
-    pin,
-    currency,
-    walletNumber: "GALA" + Math.floor(9000 + Math.random() * 1000),
-    balance: 0,
-    isAdmin: true
-  };
-
-  saveUsers();
-  alert("Sub-admin created.");
-  showDashboard();
-}
-
-let recentTransfers = [];
-
-function initiateTransfer() {
-  const senderUsername = sessionStorage.getItem("loggedInUser");
-  const sender = users[senderUsername];
-  const recipientWallet = document.getElementById("recipientWallet").value.trim();
-  const amount = parseFloat(document.getElementById("transferAmount").value);
-  const pin = document.getElementById("pinCheck").value.trim();
-function createSubAdmin() {
-  const name = document.getElementById("subName").value.trim();
-  const email = document.getElementById("subEmail").value.trim();
-  const password = document.getElementById("subPass").value;
-  const pin = document.getElementById("subPin").value;
-  const currency = document.getElementById("subCurrency").value;
-  const username = name.toLowerCase().replace(/\s+/g, '');
-
-  if (!name || !email || !password || !pin) {
-    alert("Fill all fields.");
-    return;
-  }
-
-  if (users[username]) {
-    alert("Sub-admin already exists.");
-    return;
-  }
-
-  users[username] = {
-    name,
-    email,
-    password,
-    pin,
-    currency,
-    walletNumber: "GALA" + Math.floor(9000 + Math.random() * 1000),
-    balance: 0,
-    isAdmin: true
-  };
-
-  saveUsers();
-  alert("Sub-admin created.");
-  showDashboard();
-}
-
-  if (!recipientWallet || isNaN(amount) || !pin) {
-    alert("Fill all fields.");
-    return;
-  }
-
-  if (pin !== sender.pin) {
-    alert("Incorrect PIN.");
-    return;
-  }
-
-  const recipient = Object.values(users).find(u => u.walletNumber === recipientWallet);
-  if (!recipient) {
-    alert("Recipient not found.");
-    return;
-  }
-
-  const now = Date.now();
-  const duplicate = recentTransfers.find(t =>
-    t.sender === senderUsername &&
-    t.recipient === recipientWallet &&
-    t.amount === amount &&
-    now - t.time < 60000
-  );
-  if (duplicate) {
-    alert("Duplicate transaction blocked.");
-    return;
-  }
-
-  const charge = amount > 250 ? Math.min(amount * 0.01, 1000) : 0;
-  if (sender.balance < amount + charge) {
-    alert("Insufficient balance.");
-    return;
-  }
-
-  sender.balance -= (amount + charge);
-  recipient.balance += amount;
-  recentTransfers.push({ sender: senderUsername, recipient: recipientWallet, amount, time: now });
-
-  saveUsers();
-  alert("Transfer successful.");
-  showDashboard();
-}
-
-window.onload = function () {
-  const loggedIn = sessionStorage.getItem("loggedInUser");
-  if (loggedIn && users[loggedIn]) {
-    showDashboard();
-  }
-}<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-function renderGraphs() {
-  const txCanvas = document.getElementById("txGraph").getContext("2d");
-  const chargeCanvas = document.getElementById("chargeGraph").getContext("2d");
-
-  const currencyTotals = {};
-  const charges = {};
-
-  for (let u of Object.values(users)) {
-    if (!currencyTotals[u.currency]) {
-      currencyTotals[u.currency] = 0;
-      charges[u.currency] = 0;
-    }
-    currencyTotals[u.currency] += u.balance;
-    if (u.balance > 250) {
-      charges[u.currency] += Math.min(u.balance * 0.01, 1000);
-    }
-  }
-
-  new Chart(txCanvas, {
-    type: 'bar',
-    data: {
-      labels: Object.keys(currencyTotals),
-      datasets: [{
-        label: 'Total Wallets per Currency',
-        data: Object.values(currencyTotals),
-        backgroundColor: '#007bff'
-      }]
-    }
-  });
-
-  new Chart(chargeCanvas, {
-    type: 'bar',
-    data: {
-      labels: Object.keys(charges),
-      datasets: [{
-        label: 'Estimated Transaction Charges',
-        data: Object.values(charges),
-        backgroundColor: '#ff8800'
-      }]
-    }
-  });
-}
-</script>
-
-</script>
-
+            if (user) {
+                localStorage.setItem('loggedInUser', JSON.stringify(user));
+                window.location.href = 'dashboard.html';
+            } else {
+                errorDiv.textContent = 'Invalid email or password. Please try again.';
+            }
+        }
+    </script>
 </body>
 </html>
