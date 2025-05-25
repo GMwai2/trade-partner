@@ -120,7 +120,7 @@
       transactionWallet: 0
     },
     "admin": {
-      name: "Admin",
+      name: "Main Admin",
       email: "admin@galakia.com",
       password: "adminpass",
       pin: "0000",
@@ -338,53 +338,53 @@
   }
 
   // Transfer money from logged in user to recipient
-function transferMoney(senderId, recipientType, recipientId, amount, currency) {
-  // Example data structures for wallets and exchange rates (you will replace these with your actual data)
-  const wallets = window.wallets; // assuming wallets is a global object: { userId: { balanceKES, balanceUSD, ... }, ... }
-  const exchangeRates = window.exchangeRates; // e.g. { 'KES': 1, 'USD': 110, 'JPY': 0.8 } (KES base)
-
-  // Validate amount
-  if (amount <= 0) {
-    alert("Please enter a valid amount.");
-    return;
-  }
-
-  // Calculate transaction charge 0.75% capped at KES 1000
-  const feeKES = Math.min(amount * 0.0075, 1000);
-  // Convert fee to sender currency (assuming currency in wallets matches)
-  const feeInCurrency = feeKES / exchangeRates[currency];
-
-  // Check sender balance
-  if (wallets[senderId][currency] < amount + feeInCurrency) {
-    alert("Insufficient balance to cover amount + fees.");
-    return;
-  }
-
-  // Deduct amount + fee from sender wallet
-  wallets[senderId][currency] -= (amount + feeInCurrency);
-
-  // Add amount to recipient wallet/bank/mobile depending on recipientType
-  if (recipientType === "wallet") {
-    // Check if recipient exists
-    if (!wallets[recipientId]) {
-      alert("Recipient wallet not found.");
+  function transfer() {
+    const senderUsername = sessionStorage.getItem("loggedInUser");
+    if (!senderUsername || !users[senderUsername]) {
+      alert("Please login.");
       return;
     }
-    wallets[recipientId][currency] = (wallets[recipientId][currency] || 0) + amount;
-  } else if (recipientType === "mobile") {
-    // For mobile banking, simulate instant credit
-    alert(`Sent ${amount} ${currency} to mobile banking number ${recipientId}.`);
-  } else if (recipientType === "bank") {
-    // For bank account, simulate instant credit
-    alert(`Sent ${amount} ${currency} to bank account ${recipientId}.`);
-  } else {
-    alert("Invalid recipient type.");
-    return;
-  }
+    const sender = users[senderUsername];
 
-  alert(`Transfer successful! You paid ${amount} ${currency} plus a fee of ${feeInCurrency.toFixed(2)} ${currency}.`);
-}
+    const recipientWallet = document.getElementById("recipientWallet").value.trim().toUpperCase();
+    const amount = Number(document.getElementById("transferAmount").value);
+    const authPin = document.getElementById("authPin").value.trim();
 
+    if (!recipientWallet || !amount || amount <= 0) {
+      alert("Please enter valid recipient wallet and amount.");
+      return;
+    }
+    if (authPin.length !== 4 || authPin !== sender.pin) {
+      alert("Invalid PIN.");
+      return;
+    }
+    if (sender.walletNumber === recipientWallet) {
+      alert("Cannot send money to your own wallet.");
+      return;
+    }
+
+    const recipient = Object.values(users).find(u => u.walletNumber === recipientWallet);
+    if (!recipient) {
+      alert("Recipient not found.");
+      return;
+    }
+
+    if (sender.balance < amount) {
+      alert("Insufficient balance.");
+      return;
+    }
+
+    // Transaction charge: 1% for amount > 250 KES, max 1000 KES
+    let charge = 0;
+    if (amount > 250) {
+      charge = Math.min(amount * 0.01, 1000);
+    }
+
+    const totalDebit = amount + charge;
+    if (sender.balance < totalDebit) {
+      alert(`Insufficient balance to cover amount + transaction charge (${charge.toFixed(2)} ${sender.currency})`);
+      return;
+    }
 
     // Deduct total from sender
     sender.balance -= totalDebit;
