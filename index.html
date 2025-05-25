@@ -31,36 +31,35 @@
     <p>Wallet: <span id="walletBalance"></span> KES</p>
     <p>Charges Wallet: <span id="chargeWalletBalance"></span> KES</p>
 
-   <div id="transferSection">
-  <h4>Transfer Money (Wallet to Wallet)</h4>
-  <input id="recipientWallet" placeholder="Recipient Wallet" onblur="showRecipientInfo()"><br>
-  <p id="recipientInfo" style="color:gray;"></p>
-  <input id="amountToSend" type="number" placeholder="Amount"><br>
-  <input id="authPin" type="password" placeholder="Authorization PIN"><br>
-  <button onclick="initiateTransfer()">Send</button>
-  <p id="transferStatus" style="color:green;"></p>
+    <div id="transferSection">
+      <h4>Transfer Money (Wallet to Wallet)</h4>
+      <input id="recipientWallet" placeholder="Recipient Wallet" onblur="showRecipientInfo()"><br>
+      <p id="recipientInfo" style="color:gray;"></p>
+      <input id="amountToSend" type="number" placeholder="Amount"><br>
+      <input id="authPin" type="password" placeholder="Authorization PIN"><br>
+      <button onclick="initiateTransfer()">Send</button>
+      <p id="transferStatus" style="color:green;"></p>
 
-  <hr>
-  <h4>Deposit Funds (Manual / Physical)</h4>
-  <input id="depositAmount" type="number" placeholder="Deposit Amount"><br>
-  <button onclick="recordPhysicalDeposit()">Deposit</button>
-  <p id="depositStatus" style="color:green;"></p>
+      <hr>
+      <h4>Deposit Funds (Manual / Physical)</h4>
+      <input id="depositAmount" type="number" placeholder="Deposit Amount"><br>
+      <button onclick="recordPhysicalDeposit()">Deposit</button>
+      <p id="depositStatus" style="color:green;"></p>
 
-  <hr>
-  <h4>Link Bank Card</h4>
-  <input id="bankCardNumber" placeholder="Card Number"><br>
-  <button onclick="saveBankCard()">Save Card</button>
-  <p id="cardStatus" style="color:green;"></p>
+      <hr>
+      <h4>Link Bank Card</h4>
+      <input id="bankCardNumber" placeholder="Card Number"><br>
+      <button onclick="saveBankCard()">Save Card</button>
+      <p id="cardStatus" style="color:green;"></p>
 
-  <hr>
-  <h4>Send to Bank Account</h4>
-  <input id="bankAccountNumber" placeholder="Bank Account Number"><br>
-  <input id="bankAmount" type="number" placeholder="Amount"><br>
-  <input id="bankPin" type="password" placeholder="Authorization PIN"><br>
-  <button onclick="sendToBank()">Send</button>
-  <p id="bankStatus" style="color:green;"></p>
-</div>
-
+      <hr>
+      <h4>Send to Bank Account</h4>
+      <input id="bankAccountNumber" placeholder="Bank Account Number"><br>
+      <input id="bankAmount" type="number" placeholder="Amount"><br>
+      <input id="bankPin" type="password" placeholder="Authorization PIN"><br>
+      <button onclick="sendToBank()">Send</button>
+      <p id="bankStatus" style="color:green;"></p>
+    </div>
 
     <h4>Transaction History</h4>
     <table id="transactionTable">
@@ -85,42 +84,39 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     const users = {
-    kilush: {
-  password: "pass123",
-  pin: "1234",
-  wallet: 10000,
-  charges: 0,
-  email: "kilush@email.com",
-  linkedCard: "",
-  usedPhysicalDeposit: false,
-  history: []
-},
-
-     Schwadz: {
-  password: "schwadz123",
-  pin: "1234",
-  wallet: 10000,
-  charges: 0,
-  email: "schwadz@email.com",
-  linkedCard: "",
-  usedPhysicalDeposit: false,
-  history: []
-},
-
+      kilush: {
+        password: "pass123",
+        pin: "1234",
+        wallet: 10000,
+        charges: 0,
+        email: "kilush@email.com",
+        linkedCard: "",
+        usedPhysicalDeposit: false,
+        history: []
+      },
+      Schwadz: {
+        password: "schwadz123",
+        pin: "1234",
+        wallet: 10000,
+        charges: 0,
+        email: "schwadz@email.com",
+        linkedCard: "",
+        usedPhysicalDeposit: false,
+        history: []
+      },
       Moses: {
-  password: "moses123",
-  pin: "1234",
-  wallet: 10000,
-  charges: 0,
-  email: "kilush@email.com",
-  linkedCard: "",
-  usedPhysicalDeposit: false,
-  history: []
-},
-
+        password: "moses123",
+        pin: "1234",
+        wallet: 10000,
+        charges: 0,
+        email: "moses@email.com",
+        linkedCard: "",
+        usedPhysicalDeposit: false,
+        history: []
+      }
     };
 
-    let admin = {
+    const admin = {
       username: "admin",
       password: "admin123",
       tradingWallet: 10000,
@@ -212,7 +208,6 @@
         return;
       }
 
-      // Prevent duplicate transfer within 1 minute
       const now = new Date();
       const lastTx = sender.history[sender.history.length - 1];
       if (
@@ -225,7 +220,6 @@
         return;
       }
 
-      // Charge logic
       let charge = 0;
       if (amount > 250) {
         charge = Math.min(amount * 0.01, 1000);
@@ -241,11 +235,9 @@
       sender.charges += charge;
       users[recipientWallet].wallet += amount;
 
-      // Record history
       const txTime = now.toLocaleString();
       sender.history.push({ date: txTime, to: recipientWallet, amount, charge });
 
-      // Admin receives
       admin.tradingWallet += amount;
       admin.chargeWallet += charge;
 
@@ -253,7 +245,6 @@
       document.getElementById("chargeWalletBalance").innerText = sender.charges.toFixed(2);
       document.getElementById("transferStatus").innerText = "Transfer complete.";
 
-      // Clear input fields
       document.getElementById("recipientWallet").value = "";
       document.getElementById("amountToSend").value = "";
       document.getElementById("authPin").value = "";
@@ -271,36 +262,66 @@
       });
     }
 
-   <div id="transferSection">
-  <h4>Transfer Money (Wallet to Wallet)</h4>
-  <input id="recipientWallet" placeholder="Recipient Wallet" onblur="showRecipientInfo()"><br>
-  <p id="recipientInfo" style="color:gray;"></p>
-  <input id="amountToSend" type="number" placeholder="Amount"><br>
-  <input id="authPin" type="password" placeholder="Authorization PIN"><br>
-  <button onclick="initiateTransfer()">Send</button>
-  <p id="transferStatus" style="color:green;"></p>
+    function recordPhysicalDeposit() {
+      const amount = parseFloat(document.getElementById("depositAmount").value);
+      if (isNaN(amount) || amount <= 0) {
+        document.getElementById("depositStatus").innerText = "Enter a valid amount.";
+        return;
+      }
+      const user = users[currentUser];
+      let bonus = amount * 0.25;
+      user.wallet += amount + bonus;
+      user.usedPhysicalDeposit = true;
+      document.getElementById("walletBalance").innerText = user.wallet.toFixed(2);
+      document.getElementById("depositStatus").innerText = `Deposited KES ${amount + bonus.toFixed(2)} (25% bonus added)`;
+      document.getElementById("depositAmount").value = "";
+    }
 
-  <hr>
-  <h4>Deposit Funds (Manual / Physical)</h4>
-  <input id="depositAmount" type="number" placeholder="Deposit Amount"><br>
-  <button onclick="recordPhysicalDeposit()">Deposit</button>
-  <p id="depositStatus" style="color:green;"></p>
+    function saveBankCard() {
+      const card = document.getElementById("bankCardNumber").value;
+      if (!card) {
+        document.getElementById("cardStatus").innerText = "Enter a card number.";
+        return;
+      }
+      users[currentUser].linkedCard = card;
+      document.getElementById("cardStatus").innerText = "Card linked successfully.";
+      document.getElementById("bankCardNumber").value = "";
+    }
 
-  <hr>
-  <h4>Link Bank Card</h4>
-  <input id="bankCardNumber" placeholder="Card Number"><br>
-  <button onclick="saveBankCard()">Save Card</button>
-  <p id="cardStatus" style="color:green;"></p>
+    function sendToBank() {
+      const account = document.getElementById("bankAccountNumber").value;
+      const amount = parseFloat(document.getElementById("bankAmount").value);
+      const pin = document.getElementById("bankPin").value;
+      const user = users[currentUser];
+      if (!account || isNaN(amount) || amount <= 0 || pin !== user.pin) {
+        document.getElementById("bankStatus").innerText = "Invalid input or incorrect PIN.";
+        return;
+      }
+      if (user.wallet < amount) {
+        document.getElementById("bankStatus").innerText = "Insufficient funds.";
+        return;
+      }
+      user.wallet -= amount;
+      admin.tradingWallet += amount;
+      document.getElementById("walletBalance").innerText = user.wallet.toFixed(2);
+      document.getElementById("bankStatus").innerText = `Sent KES ${amount} to account ${account}`;
+      document.getElementById("bankAccountNumber").value = "";
+      document.getElementById("bankAmount").value = "";
+      document.getElementById("bankPin").value = "";
+    }
 
-  <hr>
-  <h4>Send to Bank Account</h4>
-  <input id="bankAccountNumber" placeholder="Bank Account Number"><br>
-  <input id="bankAmount" type="number" placeholder="Amount"><br>
-  <input id="bankPin" type="password" placeholder="Authorization PIN"><br>
-  <button onclick="sendToBank()">Send</button>
-  <p id="bankStatus" style="color:green;"></p>
-</div>
+    function renderGraphs() {
+      const currencies = Object.keys(users);
+      const transfers = currencies.map(k => users[k].history.reduce((sum, tx) => sum + tx.amount, 0));
+      const charges = currencies.map(k => users[k].history.reduce((sum, tx) => sum + tx.charge, 0));
 
+      new Chart(document.getElementById("transferGraph"), {
+        type: 'bar',
+        data: {
+          labels: currencies,
+          datasets: [{ label: 'Total Transfers (KES)', data: transfers, backgroundColor: 'blue' }]
+        }
+      });
 
       new Chart(document.getElementById("chargeGraph"), {
         type: 'bar',
