@@ -374,7 +374,7 @@
       return;
     }
 
-    // Transaction charge: 1% for amount > 250 KES, max 1000 KES
+    // Transaction charge: 0.75% for amount > 250 KES, max 1000 KES
     let charge = 0;
     if (amount > 250) {
       charge = Math.min(amount * 0.01, 1000);
