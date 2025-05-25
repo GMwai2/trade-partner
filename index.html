@@ -1,119 +1,267 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Wallet Platform</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Galakia Flow | Trade Partner Wallet</title>
   <style>
-    body { font-family: Arial; margin: 50px; background: #f4f4f4; }
-    .container { max-width: 400px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    h2 { text-align: center; }
-    input, select { width: 100%; padding: 10px; margin: 8px 0; }
-    button { width: 100%; padding: 10px; background: #28a745; color: white; border: none; margin-top: 10px; }
-    .switch { text-align: center; margin-top: 15px; }
-    .error { color: red; text-align: center; }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f3f6f9;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 500px;
+      padding: 20px;
+      background: white;
+      margin-top: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
+    }
+    h1, h2, h3 {
+      text-align: center;
+      color: #003366;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #007bff;
+      color: white;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .hidden {
+      display: none;
+    }
+    #recipientDetails {
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+    .branding img {
+      width: 180px;
+      max-width: 90%;
+      margin-top: 30px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .branding p {
+      color: #555;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2 id="formTitle">Login</h2>
 
-    <div id="error" class="error"></div>
+  <div class="branding">
+    <img src="images/galakia_logo.png" alt="Galakia Flow Logo" />
+    <h1>Welcome to Galakia Flow</h1>
+    <p>Seamless Wallet Transfers. No Borders. No USD Detours.</p>
+  </div>
 
+  <div class="container" id="authContainer">
+    <h2>Trade Partner Wallet</h2>
+
+    <!-- Login Form -->
     <div id="loginForm">
-      <input type="email" id="loginEmail" placeholder="Email" required>
-      <input type="password" id="loginPassword" placeholder="Password" required>
+      <input type="text" id="loginEmail" placeholder="Email" autocomplete="username" />
+      <input type="password" id="loginPin" placeholder="PIN (4 digits)" autocomplete="current-password" maxlength="4" />
+      <label><input type="checkbox" id="showLoginPin"> Show PIN</label>
       <button onclick="login()">Login</button>
+      <p>New user? <a href="#" onclick="toggleForms(event)">Register</a></p>
     </div>
 
-    <div id="registerForm" style="display:none;">
-      <input type="text" id="regName" placeholder="Full Name" required>
-      <input type="email" id="regEmail" placeholder="Email" required>
-      <input type="password" id="regPassword" placeholder="Password" required>
-      <input type="text" id="regWallet" placeholder="Preferred Wallet Number" required>
+    <!-- Registration Form -->
+    <div id="registerForm" class="hidden">
+      <input type="text" id="regName" placeholder="Full Name" autocomplete="name" />
+      <input type="email" id="regEmail" placeholder="Email" autocomplete="email" />
+      <input type="password" id="regPassword" placeholder="Password" autocomplete="new-password" />
+      <input type="text" id="regPin" placeholder="4-digit PIN" maxlength="4" />
+      <select id="regCurrency">
+        <option value="KES">KES</option>
+        <option value="USD">USD</option>
+        <option value="JPY">JPY</option>
+      </select>
       <button onclick="register()">Register</button>
-    </div>
-
-    <div class="switch">
-      <a href="#" onclick="toggleForm()">Switch to <span id="toggleText">Register</span></a>
+      <p>Already have an account? <a href="#" onclick="toggleForms(event)">Login</a></p>
     </div>
   </div>
 
-  <script>
-    function toggleForm() {
-      const loginForm = document.getElementById('loginForm');
-      const registerForm = document.getElementById('registerForm');
-      const formTitle = document.getElementById('formTitle');
-      const toggleText = document.getElementById('toggleText');
-      document.getElementById('error').textContent = '';
+  <!-- Dashboard -->
+  <div class="container hidden" id="dashboard"></div>
 
-      if (loginForm.style.display === "none") {
-        loginForm.style.display = "block";
-        registerForm.style.display = "none";
-        formTitle.textContent = "Login";
-        toggleText.textContent = "Register";
-      } else {
-        loginForm.style.display = "none";
-        registerForm.style.display = "block";
-        formTitle.textContent = "Register";
-        toggleText.textContent = "Login";
+<script>
+  // Initialize users from localStorage or create defaults
+  let users = JSON.parse(localStorage.getItem("users")) || {
+    "kilush": {
+      name: "Kilush",
+      email: "kilush@example.com",
+      password: "pass123",
+      pin: "1234",
+      currency: "KES",
+      walletNumber: "GALA1001",
+      balance: 5000,
+      isAdmin: false
+    },
+    "admin": {
+      name: "Main Admin",
+      email: "admin@galakia.com",
+      password: "adminpass",
+      pin: "0000",
+      currency: "KES",
+      walletNumber: "GALA9999",
+      balance: 1000000,
+      isAdmin: true,
+      transactionWallet: 0,
+      physicalWallet: 0
+    }
+  };
+
+  function saveUsers() {
+    localStorage.setItem("users", JSON.stringify(users));
+  }
+
+  // Show/hide login and registration forms
+  function toggleForms(event) {
+    event.preventDefault();
+    document.getElementById("loginForm").classList.toggle("hidden");
+    document.getElementById("registerForm").classList.toggle("hidden");
+  }
+
+  // Show/hide PIN in login
+  document.getElementById("showLoginPin").addEventListener("change", function() {
+    const pinInput = document.getElementById("loginPin");
+    pinInput.type = this.checked ? "text" : "password";
+  });
+
+  // Register new user
+  function register() {
+    const name = document.getElementById("regName").value.trim();
+    const email = document.getElementById("regEmail").value.trim().toLowerCase();
+    const password = document.getElementById("regPassword").value;
+    const pin = document.getElementById("regPin").value.trim();
+    const currency = document.getElementById("regCurrency").value;
+    const username = email.split('@')[0]; // Use email prefix as username
+
+    if (!name || !email || !password || !pin || !currency) {
+      alert("Please fill in all fields.");
+      return;
+    }
+    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+      alert("PIN must be exactly 4 digits.");
+      return;
+    }
+    // Check email format basic
+    if (!email.includes("@") || !email.includes(".")) {
+      alert("Please enter a valid email.");
+      return;
+    }
+    // Check if email already registered
+    for (let u in users) {
+      if (users[u].email === email) {
+        alert("Email already registered.");
+        return;
       }
     }
 
-    function register() {
-      const name = document.getElementById('regName').value.trim();
-      const email = document.getElementById('regEmail').value.trim().toLowerCase();
-      const password = document.getElementById('regPassword').value;
-      const wallet = document.getElementById('regWallet').value.trim();
-      const errorDiv = document.getElementById('error');
+    // Generate wallet number unique
+    let walletNumber;
+    do {
+      walletNumber = "GALA" + Math.floor(1000 + Math.random() * 9000);
+    } while (Object.values(users).some(u => u.walletNumber === walletNumber));
 
-      if (!name || !email || !password || !wallet) {
-        errorDiv.textContent = "Please fill in all fields.";
-        return;
-      }
-
-      let users = JSON.parse(localStorage.getItem('users') || '[]');
-      if (users.find(u => u.email === email)) {
-        errorDiv.textContent = "Email is already registered.";
-        return;
-      }
-
-      users.push({ name, email, password, wallet, balance: 0, transactions: [] });
-      localStorage.setItem('users', JSON.stringify(users));
-      errorDiv.style.color = "green";
-      errorDiv.textContent = "Registration successful. You can now login.";
-      toggleForm();
-    }
-
-    function login() {
-      const email = document.getElementById('loginEmail').value.trim().toLowerCase();
-      const password = document.getElementById('loginPassword').value;
-      const errorDiv = document.getElementById('error');
-
-      if (email === "admin@wallet.com" && password === "admin123") {
-        sessionStorage.setItem('adminLoggedIn', true);
-        window.location.href = "admin-dashboard.html";
-        return;
-      }
-
-      let users = JSON.parse(localStorage.getItem('users') || '[]');
-      const user = users.find(u => u.email === email && u.password === password);
-
-      if (user) {
-        sessionStorage.setItem('loggedInUser', email);
-        window.location.href = "dashboard.html";
-      } else {
-        errorDiv.textContent = "Invalid email or password. Please try again.";
-      }
-    }
-
-    // Auto-login redirection
-    window.onload = function () {
-      if (sessionStorage.getItem('loggedInUser')) {
-        window.location.href = "dashboard.html";
-      }
-      if (sessionStorage.getItem('adminLoggedIn')) {
-        window.location.href = "admin-dashboard.html";
-      }
+    users[username] = {
+      name,
+      email,
+      password,
+      pin,
+      currency,
+      walletNumber,
+      balance: 0,
+      isAdmin: false
     };
-  </script>
-</body>
-</html>
+
+    saveUsers();
+    alert("Registration successful! Please login.");
+    toggleForms(new Event('click')); // Switch to login form
+  }
+
+  // Login function
+  function login() {
+    const email = document.getElementById("loginEmail").value.trim().toLowerCase();
+    const pin = document.getElementById("loginPin").value.trim();
+
+    if (!email || !pin) {
+      alert("Please enter both email and PIN.");
+      return;
+    }
+
+    const user = Object.values(users).find(u => u.email === email && u.pin === pin);
+    if (!user) {
+      alert("Invalid email or PIN. Please try again.");
+      return;
+    }
+
+    // Save session in sessionStorage (not localStorage)
+    sessionStorage.setItem("loggedInUserEmail", user.email);
+
+    // Show dashboard
+    showDashboard();
+  }
+
+  // Logout function
+  function logout() {
+    sessionStorage.removeItem("loggedInUserEmail");
+    location.reload();
+  }
+
+  // Show Dashboard
+  function showDashboard() {
+    const email = sessionStorage.getItem("loggedInUserEmail");
+    if (!email) {
+      // No logged in user, show auth forms
+      document.getElementById("authContainer").classList.remove("hidden");
+      document.getElementById("dashboard").classList.add("hidden");
+      return;
+    }
+
+    const user = Object.values(users).find(u => u.email === email);
+    if (!user) {
+      alert("User not found.");
+      sessionStorage.removeItem("loggedInUserEmail");
+      location.reload();
+      return;
+    }
+
+    // Hide auth forms, show dashboard
+    document.getElementById("authContainer").classList.add("hidden");
+    const dash = document.getElementById("dashboard");
+    dash.classList.remove("hidden");
+
+    if (user.isAdmin) {
+      dash.innerHTML = `
+        <h2>Admin Dashboard</h2>
+        <p>Welcome, ${user.name}</p>
+        <p><strong>Wallet:</strong> ${user.walletNumber}
