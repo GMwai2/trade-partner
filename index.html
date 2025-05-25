@@ -1,243 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Galakia Flow | Trade Partner Wallet</title>
+  <meta charset="UTF-8">
+  <title>Wallet Platform</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f3f6f9;
       margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .container {
-      width: 100%;
-      max-width: 500px;
-      padding: 20px;
-      background: white;
-      margin-top: 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
-    }
-    h1, h2, h3 {
+      padding: 40px;
+      background-color: #f5f5f5;
       text-align: center;
-      color: #003366;
     }
-    input, select {
-      width: 100%;
-      padding: 10px;
-      margin-top: 8px;
-      margin-bottom: 15px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 16px;
-    }
-    button {
-      width: 100%;
-      padding: 12px;
-      background-color: #007bff;
-      color: white;
-      font-size: 16px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    .hidden {
+    #loginSection, #dashboardSection {
       display: none;
+      margin-top: 40px;
     }
-    #recipientDetails {
-      border: 1px solid #ccc;
+    input, button {
       padding: 10px;
-      border-radius: 5px;
-      margin-bottom: 10px;
+      margin: 5px;
+      width: 200px;
+      font-size: 16px;
     }
-    .branding img {
-      width: 180px;
-      max-width: 90%;
-      margin-top: 30px;
+    .balance-box {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      display: inline-block;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    .branding p {
-      color: #555;
+    .logout-btn {
+      background-color: #e53935;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
 
-  <div class="branding">
-    <img src="images/galakia_logo.png" alt="Galakia Flow Logo" />
-    <h1>Welcome to Galakia Flow</h1>
-    <p>Seamless Wallet Transfers. No Borders. No USD Detours.</p>
+  <h1>Wallet Login</h1>
+
+  <!-- Login Section -->
+  <div id="loginSection">
+    <input type="text" id="username" placeholder="Username" /><br>
+    <input type="password" id="password" placeholder="Password" /><br>
+    <button onclick="login()">Login</button>
   </div>
 
-  <div class="container" id="authContainer">
-    <h2>Trade Partner Wallet</h2>
-
-    <div id="loginForm">
-      <input type="text" id="loginUsername" placeholder="Username" />
-      <input type="password" id="loginPassword" placeholder="Password" />
-      <label><input type="checkbox" onclick="togglePassword()"> Show Password</label>
-      <button onclick="login()">Login</button>
+  <!-- Dashboard Section -->
+  <div id="dashboardSection">
+    <h2>Welcome, <span id="displayName"></span></h2>
+    <p>Wallet ID: <span id="walletId"></span></p>
+    <div class="balance-box">
+      <h3>Wallet Balances</h3>
+      <div id="balanceDisplay"></div>
     </div>
+    <button class="logout-btn" onclick="logout()">Logout</button>
   </div>
 
-  <div class="container hidden" id="dashboard"></div>
+  <script>
+    // Default users
+    const defaultUsers = {
+      kilush: {
+        password: "kilush123",
+        name: "Kilush",
+        walletId: "KLS001",
+        balances: { KES: 1000, BTC: 0, USD: 0, ETH: 0, JPY: 0 },
+        email: "kilush@example.com"
+      },
+      schwadz: {
+        password: "schwadz123",
+        name: "Schwadz",
+        walletId: "SCH001",
+        balances: { USD: 6.4, KES: 0, BTC: 0, ETH: 0, JPY: 0 },
+        email: "mdgakuo2@gmail.com"
+      },
+      admin: {
+        password: "admin123",
+        name: "System Admin",
+        walletId: "ADM001",
+        balances: { KES: 0, USD: 0, BTC: 0, ETH: 0, JPY: 0 },
+        email: "mdgakuo3@gmail.com"
+      }
+    };
 
-<script>
-  // Initialize users object
-  let users = {
-    kilush: {
-      password: "kilush123",
-      name: "Kilush",
-      walletId: "KLS001",
-      balances: { KES: 1000, BTC: 0, USD: 0, ETH: 0, JPY: 0 },
-      email: "kilush@example.com"
-    },
-    schwadz: {
-      password: "schwadz123",
-      name: "Schwadz",
-      walletId: "SCH001",
-      balances: { USD: 6.4, KES: 0, BTC: 0, ETH: 0, JPY: 0 },
-      email: "mdgakuo2@gmail.com"
-    },
-    admin: {
-      password: "admin123",
-      name: "System Admin",
-      walletId: "ADM001",
-      balances: { KES: 0, USD: 0, BTC: 0, ETH: 0, JPY: 0 },
-      email: "mdgakuo3@gmail.com"
-    }
-  };
-
-  // Save users to localStorage if not already saved
-  if (!localStorage.getItem("users")) {
+    // Load users from localStorage or set defaults
+    let users = JSON.parse(localStorage.getItem("users")) || defaultUsers;
     localStorage.setItem("users", JSON.stringify(users));
-  } else {
-    users = JSON.parse(localStorage.getItem("users"));
-  }
 
-  // Toggle password visibility
-  function togglePassword() {
-    const input = document.getElementById("loginPassword");
-    input.type = input.type === "password" ? "text" : "password";
-  }
+    // On load, check session
+    window.onload = function () {
+      const loggedInUser = sessionStorage.getItem("loggedInUser");
+      if (loggedInUser && users[loggedInUser]) {
+        showDashboard(loggedInUser);
+      } else {
+        document.getElementById("loginSection").style.display = "block";
+      }
+    };
 
-  // Login function
-  function login() {
-    const username = document.getElementById("loginUsername").value.trim();
-    const password = document.getElementById("loginPassword").value;
+    function login() {
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
 
-    if (!username || !password) {
-      alert("Please enter username and password.");
-      return;
+      const user = users[username];
+      if (user && user.password === password) {
+        sessionStorage.setItem("loggedInUser", username);
+        showDashboard(username);
+      } else {
+        alert("Invalid credentials.");
+      }
     }
 
-    const user = users[username];
-    if (!user || user.password !== password) {
-      alert("Invalid username or password.");
-      return;
+    function showDashboard(username) {
+      const user = users[username];
+      document.getElementById("loginSection").style.display = "none";
+      document.getElementById("dashboardSection").style.display = "block";
+      document.getElementById("displayName").innerText = user.name;
+      document.getElementById("walletId").innerText = user.walletId;
+
+      // Display balances
+      const balances = user.balances;
+      let balanceHTML = "";
+      for (let currency in balances) {
+        balanceHTML += `<p>${currency}: ${balances[currency]}</p>`;
+      }
+      document.getElementById("balanceDisplay").innerHTML = balanceHTML;
     }
 
-    sessionStorage.setItem("loggedInUser", username);
-    showDashboard();
-  }
-
-  // Logout function
-  function logout() {
-    sessionStorage.removeItem("loggedInUser");
-    location.reload();
-  }
-
-  // Show dashboard
-  function showDashboard() {
-    const username = sessionStorage.getItem("loggedInUser");
-    if (!username || !users[username]) {
-      alert("Please login first.");
-      return;
+    function logout() {
+      sessionStorage.removeItem("loggedInUser");
+      document.getElementById("dashboardSection").style.display = "none";
+      document.getElementById("loginSection").style.display = "block";
     }
-    const user = users[username];
-
-    document.getElementById("authContainer").classList.add("hidden");
-    const dash = document.getElementById("dashboard");
-    dash.classList.remove("hidden");
-
-    let balancesHtml = "";
-    for (let currency in user.balances) {
-      balancesHtml += `<p><strong>${currency}:</strong> ${user.balances[currency]}</p>`;
-    }
-
-    dash.innerHTML = `
-      <h2>User Dashboard</h2>
-      <p>Welcome, ${user.name}</p>
-      <p><strong>Wallet ID:</strong> ${user.walletId}</p>
-      ${balancesHtml}
-
-      <h3>Transfer Money</h3>
-      <input type="text" id="recipientWalletId" placeholder="Recipient Wallet ID" />
-      <input type="number" id="transferAmount" placeholder="Amount to send" min="1" />
-      <select id="transferCurrency">
-        <option value="KES">KES</option>
-        <option value="USD">USD</option>
-        <option value="BTC">BTC</option>
-        <option value="ETH">ETH</option>
-        <option value="JPY">JPY</option>
-      </select>
-      <button onclick="transfer()">Send</button>
-
-      <button style="margin-top:20px;" onclick="logout()">Logout</button>
-    `;
-  }
-
-  // Transfer function
-  function transfer() {
-    const senderUsername = sessionStorage.getItem("loggedInUser");
-    const sender = users[senderUsername];
-
-    const recipientWalletId = document.getElementById("recipientWalletId").value.trim();
-    const amount = parseFloat(document.getElementById("transferAmount").value);
-    const currency = document.getElementById("transferCurrency").value;
-
-    if (!recipientWalletId || isNaN(amount) || amount <= 0) {
-      alert("Please enter valid recipient wallet ID and amount.");
-      return;
-    }
-
-    const recipientUsername = Object.keys(users).find(
-      key => users[key].walletId === recipientWalletId
-    );
-
-    if (!recipientUsername) {
-      alert("Recipient not found.");
-      return;
-    }
-
-    if (sender.balances[currency] < amount) {
-      alert("Insufficient balance.");
-      return;
-    }
-
-    sender.balances[currency] -= amount;
-    users[recipientUsername].balances[currency] += amount;
-
-    localStorage.setItem("users", JSON.stringify(users));
-    alert(`Transfer successful! Sent ${amount} ${currency} to ${users[recipientUsername].name}.`);
-    showDashboard();
-  }
-
-  // On page load
-  window.onload = function () {
-    const loggedInUser = sessionStorage.getItem("loggedInUser");
-    if (loggedInUser && users[loggedInUser]) {
-      showDashboard();
-    }
-  };
-</script>
-
+  </script>
 </body>
 </html>
