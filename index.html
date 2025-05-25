@@ -31,15 +31,36 @@
     <p>Wallet: <span id="walletBalance"></span> KES</p>
     <p>Charges Wallet: <span id="chargeWalletBalance"></span> KES</p>
 
-    <div id="transferSection">
-      <h4>Transfer Money</h4>
-      <input id="recipientWallet" placeholder="Recipient Wallet" onblur="showRecipientInfo()"><br>
-      <p id="recipientInfo" style="color:gray;"></p>
-      <input id="amountToSend" type="number" placeholder="Amount"><br>
-      <input id="authPin" type="password" placeholder="Authorization PIN"><br>
-      <button onclick="initiateTransfer()">Send</button>
-      <p id="transferStatus" style="color:green;"></p>
-    </div>
+   <div id="transferSection">
+  <h4>Transfer Money (Wallet to Wallet)</h4>
+  <input id="recipientWallet" placeholder="Recipient Wallet" onblur="showRecipientInfo()"><br>
+  <p id="recipientInfo" style="color:gray;"></p>
+  <input id="amountToSend" type="number" placeholder="Amount"><br>
+  <input id="authPin" type="password" placeholder="Authorization PIN"><br>
+  <button onclick="initiateTransfer()">Send</button>
+  <p id="transferStatus" style="color:green;"></p>
+
+  <hr>
+  <h4>Deposit Funds (Manual / Physical)</h4>
+  <input id="depositAmount" type="number" placeholder="Deposit Amount"><br>
+  <button onclick="recordPhysicalDeposit()">Deposit</button>
+  <p id="depositStatus" style="color:green;"></p>
+
+  <hr>
+  <h4>Link Bank Card</h4>
+  <input id="bankCardNumber" placeholder="Card Number"><br>
+  <button onclick="saveBankCard()">Save Card</button>
+  <p id="cardStatus" style="color:green;"></p>
+
+  <hr>
+  <h4>Send to Bank Account</h4>
+  <input id="bankAccountNumber" placeholder="Bank Account Number"><br>
+  <input id="bankAmount" type="number" placeholder="Amount"><br>
+  <input id="bankPin" type="password" placeholder="Authorization PIN"><br>
+  <button onclick="sendToBank()">Send</button>
+  <p id="bankStatus" style="color:green;"></p>
+</div>
+
 
     <h4>Transaction History</h4>
     <table id="transactionTable">
@@ -64,15 +85,46 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     const users = {
-      kilush: { password: "pass123", pin: "1234", wallet: 10000, charges: 0, email: "kilush@email.com", history: [] },
-      schwadz: { password: "pass123", pin: "5678", wallet: 8000, charges: 0, email: "schwadz@email.com", history: [] }
+    kilush: {
+  password: "pass123",
+  pin: "1234",
+  wallet: 10000,
+  charges: 0,
+  email: "kilush@email.com",
+  linkedCard: "",
+  usedPhysicalDeposit: false,
+  history: []
+},
+
+     Schwadz: {
+  password: "schwadz123",
+  pin: "1234",
+  wallet: 10000,
+  charges: 0,
+  email: "schwadz@email.com",
+  linkedCard: "",
+  usedPhysicalDeposit: false,
+  history: []
+},
+
+      Moses: {
+  password: "moses123",
+  pin: "1234",
+  wallet: 10000,
+  charges: 0,
+  email: "kilush@email.com",
+  linkedCard: "",
+  usedPhysicalDeposit: false,
+  history: []
+},
+
     };
 
     let admin = {
       username: "admin",
       password: "admin123",
-      tradingWallet: 0,
-      chargeWallet: 0
+      tradingWallet: 10000,
+      chargeWallet: 50000
     };
 
     let currentUser = null;
@@ -219,18 +271,36 @@
       });
     }
 
-    function renderGraphs() {
-      const currencies = Object.keys(users);
-      const transfers = currencies.map(u => users[u].history.reduce((s, tx) => s + tx.amount, 0));
-      const charges = currencies.map(u => users[u].history.reduce((s, tx) => s + tx.charge, 0));
+   <div id="transferSection">
+  <h4>Transfer Money (Wallet to Wallet)</h4>
+  <input id="recipientWallet" placeholder="Recipient Wallet" onblur="showRecipientInfo()"><br>
+  <p id="recipientInfo" style="color:gray;"></p>
+  <input id="amountToSend" type="number" placeholder="Amount"><br>
+  <input id="authPin" type="password" placeholder="Authorization PIN"><br>
+  <button onclick="initiateTransfer()">Send</button>
+  <p id="transferStatus" style="color:green;"></p>
 
-      new Chart(document.getElementById("transferGraph"), {
-        type: 'bar',
-        data: {
-          labels: currencies,
-          datasets: [{ label: 'Total Sent (KES)', data: transfers, backgroundColor: 'blue' }]
-        }
-      });
+  <hr>
+  <h4>Deposit Funds (Manual / Physical)</h4>
+  <input id="depositAmount" type="number" placeholder="Deposit Amount"><br>
+  <button onclick="recordPhysicalDeposit()">Deposit</button>
+  <p id="depositStatus" style="color:green;"></p>
+
+  <hr>
+  <h4>Link Bank Card</h4>
+  <input id="bankCardNumber" placeholder="Card Number"><br>
+  <button onclick="saveBankCard()">Save Card</button>
+  <p id="cardStatus" style="color:green;"></p>
+
+  <hr>
+  <h4>Send to Bank Account</h4>
+  <input id="bankAccountNumber" placeholder="Bank Account Number"><br>
+  <input id="bankAmount" type="number" placeholder="Amount"><br>
+  <input id="bankPin" type="password" placeholder="Authorization PIN"><br>
+  <button onclick="sendToBank()">Send</button>
+  <p id="bankStatus" style="color:green;"></p>
+</div>
+
 
       new Chart(document.getElementById("chargeGraph"), {
         type: 'bar',
