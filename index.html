@@ -188,56 +188,28 @@
 
       document.getElementById("transferStatus").innerText = "";
 
-      if (!users[recipientWallet]) {
-        alert("Recipient wallet not found.");
-        return;
-      }
-
-      if (recipientWallet === currentUser) {
-        alert("Cannot send to yourself.");
-        return;
-      }
-
-      if (isNaN(amount) || amount <= 0) {
-        alert("Enter a valid amount.");
-        return;
-      }
-
-      if (pin !== sender.pin) {
-        alert("Incorrect PIN.");
-        return;
-      }
+      if (!users[recipientWallet]) return alert("Recipient wallet not found.");
+      if (recipientWallet === currentUser) return alert("Cannot send to yourself.");
+      if (isNaN(amount) || amount <= 0) return alert("Enter a valid amount.");
+      if (pin !== sender.pin) return alert("Incorrect PIN.");
 
       const now = new Date();
       const lastTx = sender.history[sender.history.length - 1];
-      if (
-        lastTx &&
-        lastTx.to === recipientWallet &&
-        lastTx.amount === amount &&
-        now - new Date(lastTx.date) < 60000
-      ) {
-        alert("Duplicate transfer detected within 1 minute.");
-        return;
+      if (lastTx && lastTx.to === recipientWallet && lastTx.amount === amount && now - new Date(lastTx.date) < 60000) {
+        return alert("Duplicate transfer detected within 1 minute.");
       }
 
       let charge = 0;
-      if (amount > 250) {
-        charge = Math.min(amount * 0.01, 1000);
-      }
+      if (amount > 250) charge = Math.min(amount * 0.01, 1000);
 
       const totalDebit = amount + charge;
-      if (sender.wallet < totalDebit) {
-        alert("Insufficient balance.");
-        return;
-      }
+      if (sender.wallet < totalDebit) return alert("Insufficient balance.");
 
       sender.wallet -= totalDebit;
       sender.charges += charge;
       users[recipientWallet].wallet += amount;
 
-      const txTime = now.toLocaleString();
-      sender.history.push({ date: txTime, to: recipientWallet, amount, charge });
-
+      sender.history.push({ date: now.toLocaleString(), to: recipientWallet, amount, charge });
       admin.tradingWallet += amount;
       admin.chargeWallet += charge;
 
@@ -273,7 +245,7 @@
       user.wallet += amount + bonus;
       user.usedPhysicalDeposit = true;
       document.getElementById("walletBalance").innerText = user.wallet.toFixed(2);
-      document.getElementById("depositStatus").innerText = `Deposited KES ${amount + bonus.toFixed(2)} (25% bonus added)`;
+      document.getElementById("depositStatus").innerText = `Deposited KES ${(amount + bonus).toFixed(2)} (25% bonus added)`;
       document.getElementById("depositAmount").value = "";
     }
 
@@ -293,41 +265,54 @@
       const amount = parseFloat(document.getElementById("bankAmount").value);
       const pin = document.getElementById("bankPin").value;
       const user = users[currentUser];
+
       if (!account || isNaN(amount) || amount <= 0 || pin !== user.pin) {
         document.getElementById("bankStatus").innerText = "Invalid input or incorrect PIN.";
         return;
       }
+
       if (user.wallet < amount) {
         document.getElementById("bankStatus").innerText = "Insufficient funds.";
         return;
       }
+
       user.wallet -= amount;
       admin.tradingWallet += amount;
+
       document.getElementById("walletBalance").innerText = user.wallet.toFixed(2);
-      document.getElementById("bankStatus").innerText = `Sent KES ${amount} to account ${account}`;
+      document.getElementById("bankStatus").innerText = `Sent KES ${amount.toFixed(2)} to Bank Account ${account}`;
+
       document.getElementById("bankAccountNumber").value = "";
       document.getElementById("bankAmount").value = "";
       document.getElementById("bankPin").value = "";
     }
 
     function renderGraphs() {
-      const currencies = Object.keys(users);
-      const transfers = currencies.map(k => users[k].history.reduce((sum, tx) => sum + tx.amount, 0));
-      const charges = currencies.map(k => users[k].history.reduce((sum, tx) => sum + tx.charge, 0));
+      const userKeys = Object.keys(users);
+      const transfers = userKeys.map(k => users[k].history.length);
+      const charges = userKeys.map(k => users[k].charges);
 
       new Chart(document.getElementById("transferGraph"), {
-        type: 'bar',
+        type: "bar",
         data: {
-          labels: currencies,
-          datasets: [{ label: 'Total Transfers (KES)', data: transfers, backgroundColor: 'blue' }]
+          labels: userKeys,
+          datasets: [{
+            label: "Transfers Made",
+            data: transfers,
+            backgroundColor: "blue"
+          }]
         }
       });
 
       new Chart(document.getElementById("chargeGraph"), {
-        type: 'bar',
+        type: "bar",
         data: {
-          labels: currencies,
-          datasets: [{ label: 'Total Charges (KES)', data: charges, backgroundColor: 'green' }]
+          labels: userKeys,
+          datasets: [{
+            label: "Charges Collected",
+            data: charges,
+            backgroundColor: "green"
+          }]
         }
       });
     }
