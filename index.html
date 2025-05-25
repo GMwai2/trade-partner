@@ -5,317 +5,217 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Wallet Platform</title>
   <style>
-    body { font-family: Arial; margin: 20px; }
+    body { font-family: Arial; padding: 20px; background: #f4f4f4; }
     .hidden { display: none; }
-    .dashboard, #transferSection, #logoutBtn, #adminGraphs { margin-top: 20px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background: #eee; }
+    .box { background: white; padding: 20px; border-radius: 10px; max-width: 500px; margin: auto; }
+    input, button { display: block; width: 100%; padding: 10px; margin: 10px 0; }
+    .dashboard { max-width: 800px; margin: auto; }
   </style>
 </head>
 <body>
-  <h2>Wallet Platform</h2>
-
-  <div id="loginSection">
-    <h3>Login</h3>
-    <input id="loginUsername" placeholder="Username"><br>
-    <input id="loginPassword" type="password" placeholder="Password"><br>
-    <button onclick="login()">Login</button>
-    <p id="loginError" style="color:red;"></p>
+  <div id="startPage" class="box">
+    <h2>Welcome to Wallet Platform</h2>
+    <button onclick="showLogin()">Login</button>
+    <button onclick="showRegister()">Register</button>
   </div>
 
-  <button id="logoutBtn" class="hidden" onclick="logout()">Logout</button>
+  <div id="loginPage" class="box hidden">
+    <h2>Login</h2>
+    <input id="loginUsername" placeholder="Username" />
+    <input id="loginPassword" type="password" placeholder="Password" />
+    <button onclick="login()">Log In</button>
+    <button onclick="showStart()">Back</button>
+  </div>
+
+  <div id="registerPage" class="box hidden">
+    <h2>Register</h2>
+    <input id="regSurname" placeholder="Surname" />
+    <input id="regMiddle" placeholder="Middle Name (optional)" />
+    <input id="regFirst" placeholder="First Name" />
+    <input id="regID" placeholder="ID/Passport Number" />
+    <input id="regPhone" placeholder="Phone Number" />
+    <input id="regEmail" placeholder="Email Address" />
+    <input id="regPassword" type="password" placeholder="Password" />
+    <input id="regPin" type="password" placeholder="Transaction PIN" />
+    <button onclick="register()">Register</button>
+    <button onclick="showStart()">Back</button>
+  </div>
 
   <div id="userDashboard" class="dashboard hidden">
-    <h3>Welcome, <span id="userName"></span></h3>
-    <p>Wallet: <span id="walletBalance"></span> KES</p>
-    <p>Charges Wallet: <span id="chargeWalletBalance"></span> KES</p>
-
-    <div id="transferSection">
-      <h4>Transfer Money (Wallet to Wallet)</h4>
-      <input id="recipientWallet" placeholder="Recipient Wallet" onblur="showRecipientInfo()"><br>
-      <p id="recipientInfo" style="color:gray;"></p>
-      <input id="amountToSend" type="number" placeholder="Amount"><br>
-      <input id="authPin" type="password" placeholder="Authorization PIN"><br>
-      <button onclick="initiateTransfer()">Send</button>
-      <p id="transferStatus" style="color:green;"></p>
-
-      <hr>
-      <h4>Deposit Funds (Manual / Physical)</h4>
-      <input id="depositAmount" type="number" placeholder="Deposit Amount"><br>
-      <button onclick="recordPhysicalDeposit()">Deposit</button>
-      <p id="depositStatus" style="color:green;"></p>
-
-      <hr>
-      <h4>Link Bank Card</h4>
-      <input id="bankCardNumber" placeholder="Card Number"><br>
-      <button onclick="saveBankCard()">Save Card</button>
-      <p id="cardStatus" style="color:green;"></p>
-
-      <hr>
-      <h4>Send to Bank Account</h4>
-      <input id="bankAccountNumber" placeholder="Bank Account Number"><br>
-      <input id="bankAmount" type="number" placeholder="Amount"><br>
-      <input id="bankPin" type="password" placeholder="Authorization PIN"><br>
-      <button onclick="sendToBank()">Send</button>
-      <p id="bankStatus" style="color:green;"></p>
-    </div>
-
-    <h4>Transaction History</h4>
-    <table id="transactionTable">
-      <thead><tr><th>Date</th><th>To</th><th>Amount</th><th>Charge</th></tr></thead>
-      <tbody></tbody>
-    </table>
+    <h2>User Dashboard</h2>
+    <div id="userInfo"></div>
+    <input id="recipientWallet" placeholder="Recipient Wallet Number" />
+    <input id="amount" placeholder="Amount" />
+    <input id="confirmPin" type="password" placeholder="Enter PIN" />
+    <button onclick="transfer()">Send Money</button>
+    <h3>Transaction Log:</h3>
+    <pre id="transactionLog"></pre>
+    <button onclick="logout()">Logout</button>
   </div>
 
   <div id="adminDashboard" class="dashboard hidden">
-    <h3>Welcome, Admin</h3>
-    <p>Admin Trading Wallet: <span id="adminTradingWallet"></span> KES</p>
-    <p>Admin Charge Wallet: <span id="adminChargeWallet"></span> KES</p>
-
-    <div id="adminGraphs">
-      <h4>Graph: Total Transfers</h4>
-      <canvas id="transferGraph" width="400" height="200"></canvas>
-      <h4>Graph: Charges Collected</h4>
-      <canvas id="chargeGraph" width="400" height="200"></canvas>
-    </div>
+    <h2>Admin Dashboard</h2>
+    <div id="adminView"></div>
+    <button onclick="logout()">Logout</button>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    const users = {
-      kilush: {
-        password: "pass123",
-        pin: "1234",
-        wallet: 10000,
-        charges: 0,
-        email: "kilush@email.com",
-        linkedCard: "",
-        usedPhysicalDeposit: false,
-        history: []
-      },
-      Schwadz: {
-        password: "schwadz123",
-        pin: "1234",
-        wallet: 10000,
-        charges: 0,
-        email: "schwadz@email.com",
-        linkedCard: "",
-        usedPhysicalDeposit: false,
-        history: []
-      },
-      Moses: {
-        password: "moses123",
-        pin: "1234",
-        wallet: 10000,
-        charges: 0,
-        email: "moses@email.com",
-        linkedCard: "",
-        usedPhysicalDeposit: false,
-        history: []
-      }
-    };
+<script>
+  const users = {
+    admin: { password: "admin123", pin: "0000", balance: 1000000, wallet: "ADM001", role: "admin", name: "Administrator" },
+    kilush: { password: "pass123", pin: "1111", balance: 5000, wallet: "KIL001", role: "user", name: "Kilush Kamau" },
+    schwadz: { password: "pass123", pin: "2222", balance: 7500, wallet: "SCH001", role: "user", name: "Schwadz M" },
+    moses: { password: "pass123", pin: "3333", balance: 3000, wallet: "MOS001", role: "user", name: "Moses L" },
+  };
 
-    const admin = {
-      username: "admin",
-      password: "admin123",
-      tradingWallet: 10000,
-      chargeWallet: 50000
-    };
+  const walletToUser = {};
+  for (let username in users) {
+    walletToUser[users[username].wallet] = username;
+  }
 
-    let currentUser = null;
+  let currentUser = null;
+  let transactionLog = [];
 
-    function login() {
-      const uname = document.getElementById("loginUsername").value;
-      const pass = document.getElementById("loginPassword").value;
-      document.getElementById("loginError").innerText = "";
+  window.onload = () => {
+    const saved = sessionStorage.getItem("loggedUser");
+    if (saved && users[saved]) {
+      currentUser = saved;
+      showDashboard();
+    } else {
+      showStart();
+    }
+  };
 
-      if (uname === admin.username && pass === admin.password) {
-        currentUser = "admin";
-        showAdminDashboard();
-      } else if (users[uname] && users[uname].password === pass) {
-        currentUser = uname;
-        showUserDashboard();
-      } else {
-        document.getElementById("loginError").innerText = "Invalid credentials.";
-      }
+  function showStart() {
+    hideAll();
+    document.getElementById("startPage").classList.remove("hidden");
+  }
+
+  function showLogin() {
+    hideAll();
+    document.getElementById("loginPage").classList.remove("hidden");
+  }
+
+  function showRegister() {
+    hideAll();
+    document.getElementById("registerPage").classList.remove("hidden");
+  }
+
+  function login() {
+    const username = document.getElementById("loginUsername").value.trim();
+    const password = document.getElementById("loginPassword").value.trim();
+    if (users[username] && users[username].password === password) {
+      currentUser = username;
+      sessionStorage.setItem("loggedUser", username);
+      showDashboard();
+    } else {
+      alert("Invalid login.");
+    }
+  }
+
+  function register() {
+    const surname = document.getElementById("regSurname").value.trim();
+    const middle = document.getElementById("regMiddle").value.trim();
+    const first = document.getElementById("regFirst").value.trim();
+    const id = document.getElementById("regID").value.trim();
+    const phone = document.getElementById("regPhone").value.trim();
+    const email = document.getElementById("regEmail").value.trim();
+    const password = document.getElementById("regPassword").value.trim();
+    const pin = document.getElementById("regPin").value.trim();
+
+    if (!surname || !first || !id || !phone || !email || !password || !pin) {
+      alert("All required fields must be filled.");
+      return;
     }
 
-    function showUserDashboard() {
-      document.getElementById("loginSection").classList.add("hidden");
-      document.getElementById("logoutBtn").classList.remove("hidden");
-      document.getElementById("userDashboard").classList.remove("hidden");
-
-      const user = users[currentUser];
-      document.getElementById("userName").innerText = currentUser;
-      document.getElementById("walletBalance").innerText = user.wallet.toFixed(2);
-      document.getElementById("chargeWalletBalance").innerText = user.charges.toFixed(2);
-
-      loadTransactionHistory(currentUser);
+    const username = id;
+    if (users[username]) {
+      alert("User already exists.");
+      return;
     }
 
-    function showAdminDashboard() {
-      document.getElementById("loginSection").classList.add("hidden");
-      document.getElementById("logoutBtn").classList.remove("hidden");
+    const wallet = "USR" + Math.floor(Math.random() * 10000);
+    users[username] = {
+      password,
+      pin,
+      balance: 0,
+      wallet,
+      role: "user",
+      name: `${surname} ${middle} ${first}`.trim()
+    };
+    walletToUser[wallet] = username;
+    alert(`Registration successful! Your username is ${username}`);
+    showLogin();
+  }
+
+  function showDashboard() {
+    hideAll();
+    const user = users[currentUser];
+    if (!user) return;
+
+    if (user.role === "admin") {
       document.getElementById("adminDashboard").classList.remove("hidden");
-
-      document.getElementById("adminTradingWallet").innerText = admin.tradingWallet.toFixed(2);
-      document.getElementById("adminChargeWallet").innerText = admin.chargeWallet.toFixed(2);
-
-      renderGraphs();
-    }
-
-    function logout() {
-      currentUser = null;
-      location.reload();
-    }
-
-    function showRecipientInfo() {
-      const recipientWallet = document.getElementById("recipientWallet").value;
-      const infoBox = document.getElementById("recipientInfo");
-      if (users[recipientWallet]) {
-        infoBox.innerText = `Recipient found: ${recipientWallet}`;
-      } else {
-        infoBox.innerText = "Recipient not found.";
+      let html = "<h3>All Users</h3><ul>";
+      for (let u in users) {
+        html += `<li>${u} (${users[u].wallet}) - ${users[u].balance} KES</li>`;
       }
+      html += "</ul>";
+      document.getElementById("adminView").innerHTML = html;
+    } else {
+      document.getElementById("userDashboard").classList.remove("hidden");
+      document.getElementById("userInfo").innerHTML = `
+        <b>Name:</b> ${user.name}<br>
+        <b>Wallet:</b> ${user.wallet}<br>
+        <b>Balance:</b> ${user.balance} KES
+      `;
+      displayTransactionLog();
+    }
+  }
+
+  function logout() {
+    currentUser = null;
+    sessionStorage.removeItem("loggedUser");
+    showStart();
+  }
+
+  function transfer() {
+    const sender = users[currentUser];
+    const recipientWallet = document.getElementById("recipientWallet").value.trim();
+    const amount = parseFloat(document.getElementById("amount").value.trim());
+    const pin = document.getElementById("confirmPin").value.trim();
+
+    if (!walletToUser[recipientWallet]) return alert("Invalid wallet.");
+    if (pin !== sender.pin) return alert("Incorrect PIN.");
+    if (isNaN(amount) || amount <= 0) return alert("Enter valid amount.");
+
+    const recipient = users[walletToUser[recipientWallet]];
+    const now = Date.now();
+    const last = sender.lastTx || 0;
+
+    if (now - last < 60000 && sender.lastDetails === `${recipientWallet}-${amount}`) {
+      return alert("Wait a minute before repeating the same transfer.");
     }
 
-    function initiateTransfer() {
-      const recipientWallet = document.getElementById("recipientWallet").value;
-      const amount = parseFloat(document.getElementById("amountToSend").value);
-      const pin = document.getElementById("authPin").value;
-      const sender = users[currentUser];
+    let fee = Math.min(Math.ceil(amount * 0.01), 1000);
+    if (sender.balance < amount + fee) return alert("Insufficient funds.");
 
-      document.getElementById("transferStatus").innerText = "";
+    sender.balance -= amount + fee;
+    recipient.balance += amount;
 
-      if (!users[recipientWallet]) return alert("Recipient wallet not found.");
-      if (recipientWallet === currentUser) return alert("Cannot send to yourself.");
-      if (isNaN(amount) || amount <= 0) return alert("Enter a valid amount.");
-      if (pin !== sender.pin) return alert("Incorrect PIN.");
+    sender.lastTx = now;
+    sender.lastDetails = `${recipientWallet}-${amount}`;
 
-      const now = new Date();
-      const lastTx = sender.history[sender.history.length - 1];
-      if (lastTx && lastTx.to === recipientWallet && lastTx.amount === amount && now - new Date(lastTx.date) < 60000) {
-        return alert("Duplicate transfer detected within 1 minute.");
-      }
+    transactionLog.push(`${sender.name} sent ${amount} KES to ${recipient.name}. Fee: ${fee}`);
+    alert("Transfer successful!");
+    showDashboard();
+  }
 
-      let charge = 0;
-      if (amount > 250) charge = Math.min(amount * 0.01, 1000);
+  function displayTransactionLog() {
+    document.getElementById("transactionLog").textContent = transactionLog.join("\n");
+  }
 
-      const totalDebit = amount + charge;
-      if (sender.wallet < totalDebit) return alert("Insufficient balance.");
-
-      sender.wallet -= totalDebit;
-      sender.charges += charge;
-      users[recipientWallet].wallet += amount;
-
-      sender.history.push({ date: now.toLocaleString(), to: recipientWallet, amount, charge });
-      admin.tradingWallet += amount;
-      admin.chargeWallet += charge;
-
-      document.getElementById("walletBalance").innerText = sender.wallet.toFixed(2);
-      document.getElementById("chargeWalletBalance").innerText = sender.charges.toFixed(2);
-      document.getElementById("transferStatus").innerText = "Transfer complete.";
-
-      document.getElementById("recipientWallet").value = "";
-      document.getElementById("amountToSend").value = "";
-      document.getElementById("authPin").value = "";
-      document.getElementById("recipientInfo").innerText = "";
-
-      loadTransactionHistory(currentUser);
-    }
-
-    function loadTransactionHistory(userKey) {
-      const table = document.getElementById("transactionTable").querySelector("tbody");
-      table.innerHTML = "";
-      users[userKey].history.forEach(tx => {
-        const row = `<tr><td>${tx.date}</td><td>${tx.to}</td><td>${tx.amount}</td><td>${tx.charge}</td></tr>`;
-        table.innerHTML += row;
-      });
-    }
-
-    function recordPhysicalDeposit() {
-      const amount = parseFloat(document.getElementById("depositAmount").value);
-      if (isNaN(amount) || amount <= 0) {
-        document.getElementById("depositStatus").innerText = "Enter a valid amount.";
-        return;
-      }
-      const user = users[currentUser];
-      let bonus = amount * 0.25;
-      user.wallet += amount + bonus;
-      user.usedPhysicalDeposit = true;
-      document.getElementById("walletBalance").innerText = user.wallet.toFixed(2);
-      document.getElementById("depositStatus").innerText = `Deposited KES ${(amount + bonus).toFixed(2)} (25% bonus added)`;
-      document.getElementById("depositAmount").value = "";
-    }
-
-    function saveBankCard() {
-      const card = document.getElementById("bankCardNumber").value;
-      if (!card) {
-        document.getElementById("cardStatus").innerText = "Enter a card number.";
-        return;
-      }
-      users[currentUser].linkedCard = card;
-      document.getElementById("cardStatus").innerText = "Card linked successfully.";
-      document.getElementById("bankCardNumber").value = "";
-    }
-
-    function sendToBank() {
-      const account = document.getElementById("bankAccountNumber").value;
-      const amount = parseFloat(document.getElementById("bankAmount").value);
-      const pin = document.getElementById("bankPin").value;
-      const user = users[currentUser];
-
-      if (!account || isNaN(amount) || amount <= 0 || pin !== user.pin) {
-        document.getElementById("bankStatus").innerText = "Invalid input or incorrect PIN.";
-        return;
-      }
-
-      if (user.wallet < amount) {
-        document.getElementById("bankStatus").innerText = "Insufficient funds.";
-        return;
-      }
-
-      user.wallet -= amount;
-      admin.tradingWallet += amount;
-
-      document.getElementById("walletBalance").innerText = user.wallet.toFixed(2);
-      document.getElementById("bankStatus").innerText = `Sent KES ${amount.toFixed(2)} to Bank Account ${account}`;
-
-      document.getElementById("bankAccountNumber").value = "";
-      document.getElementById("bankAmount").value = "";
-      document.getElementById("bankPin").value = "";
-    }
-
-    function renderGraphs() {
-      const userKeys = Object.keys(users);
-      const transfers = userKeys.map(k => users[k].history.length);
-      const charges = userKeys.map(k => users[k].charges);
-
-      new Chart(document.getElementById("transferGraph"), {
-        type: "bar",
-        data: {
-          labels: userKeys,
-          datasets: [{
-            label: "Transfers Made",
-            data: transfers,
-            backgroundColor: "blue"
-          }]
-        }
-      });
-
-      new Chart(document.getElementById("chargeGraph"), {
-        type: "bar",
-        data: {
-          labels: userKeys,
-          datasets: [{
-            label: "Charges Collected",
-            data: charges,
-            backgroundColor: "green"
-          }]
-        }
-      });
-    }
-  </script>
+  function hideAll() {
+    document.querySelectorAll(".box, .dashboard").forEach(div => div.classList.add("hidden"));
+  }
+</script>
 </body>
 </html>
