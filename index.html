@@ -8,12 +8,17 @@
     body {
       font-family: Arial, sans-serif;
       background-color: #f3f6f9;
-      margin: 0; padding: 0;
-      display: flex; flex-direction: column; align-items: center;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     .container {
-      width: 100%; max-width: 500px;
-      padding: 20px; background: white;
+      width: 100%;
+      max-width: 500px;
+      padding: 20px;
+      background: white;
       margin-top: 20px;
       border-radius: 8px;
       box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
@@ -23,24 +28,30 @@
       color: #003366;
     }
     input, select {
-      width: 100%; padding: 10px;
-      margin-top: 8px; margin-bottom: 15px;
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      margin-bottom: 15px;
       border: 1px solid #ccc;
       border-radius: 6px;
       font-size: 16px;
     }
     button {
-      width: 100%; padding: 12px;
+      width: 100%;
+      padding: 12px;
       background-color: #007bff;
       color: white;
       font-size: 16px;
-      border: none; border-radius: 6px;
+      border: none;
+      border-radius: 6px;
       cursor: pointer;
     }
     button:hover {
       background-color: #0056b3;
     }
-    .hidden { display: none; }
+    .hidden {
+      display: none;
+    }
     #recipientDetails {
       border: 1px solid #ccc;
       padding: 10px;
@@ -48,7 +59,8 @@
       margin-bottom: 10px;
     }
     .branding img {
-      width: 180px; max-width: 90%;
+      width: 180px;
+      max-width: 90%;
       margin-top: 30px;
     }
     .branding p {
@@ -72,7 +84,7 @@
       <input type="password" id="loginPassword" placeholder="Password" />
       <label><input type="checkbox" onclick="togglePassword()"> Show Password</label>
       <button onclick="login()">Login</button>
-      <p>New user? <a href="#" onclick="toggleForms()">Register</a></p>
+      <p>New user? <a href="#" onclick="toggleForms(event)">Register</a></p>
     </div>
 
     <div id="registerForm" class="hidden">
@@ -86,14 +98,14 @@
         <option value="JPY">JPY</option>
       </select>
       <button onclick="register()">Register</button>
-      <p>Already have an account? <a href="#" onclick="toggleForms()">Login</a></p>
+      <p>Already have an account? <a href="#" onclick="toggleForms(event)">Login</a></p>
     </div>
   </div>
 
   <div class="container hidden" id="dashboard"></div>
 
 <script>
-  // Load users from localStorage or use default users
+  // Load or initialize users object from localStorage
   let users = JSON.parse(localStorage.getItem("users")) || {
     "kilush": {
       name: "Kilush",
@@ -103,7 +115,9 @@
       currency: "KES",
       walletNumber: "GALA1001",
       balance: 5000,
-      isAdmin: false
+      isAdmin: false,
+      physicalWallet: 0,
+      transactionWallet: 0
     },
     "admin": {
       name: "Main Admin",
@@ -113,19 +127,25 @@
       currency: "KES",
       walletNumber: "GALA9999",
       balance: 1000000,
-      isAdmin: true
+      isAdmin: true,
+      physicalWallet: 0,
+      transactionWallet: 0
     }
   };
 
+  // Save users back to localStorage
   function saveUsers() {
     localStorage.setItem("users", JSON.stringify(users));
   }
 
-  function toggleForms() {
+  // Toggle between login and registration forms
+  function toggleForms(e) {
+    if (e) e.preventDefault();
     document.getElementById("loginForm").classList.toggle("hidden");
     document.getElementById("registerForm").classList.toggle("hidden");
   }
 
+  // Toggle password visibility on login form
   function togglePassword() {
     const input = document.getElementById("loginPassword");
     input.type = input.type === "password" ? "text" : "password";
@@ -144,10 +164,12 @@
       alert("Please fill in all fields.");
       return;
     }
+
     if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
       alert("PIN must be exactly 4 digits.");
       return;
     }
+
     if (users[username]) {
       alert("Username already exists.");
       return;
@@ -163,7 +185,9 @@
       currency,
       walletNumber,
       balance: 0,
-      isAdmin: false
+      isAdmin: false,
+      physicalWallet: 0,
+      transactionWallet: 0
     };
 
     saveUsers();
@@ -171,7 +195,7 @@
     toggleForms();
   }
 
-  // Login user
+  // Login user using username and password
   function login() {
     const username = document.getElementById("loginUsername").value.trim().toLowerCase();
     const password = document.getElementById("loginPassword").value;
@@ -187,25 +211,29 @@
       return;
     }
 
-    // Save session
+    // Save session (use sessionStorage to clear on browser close)
     sessionStorage.setItem("loggedInUser", username);
+
+    // Show dashboard
     showDashboard();
   }
 
-  // Show dashboard after login
+  // Logout function clears session and reloads
+  function logout() {
+    sessionStorage.removeItem("loggedInUser");
+    location.reload();
+  }
+
+  // Show dashboard depending on user role
   function showDashboard() {
     const username = sessionStorage.getItem("loggedInUser");
-    if (!username) {
+    if (!username || !users[username]) {
       alert("Please login first.");
       return;
     }
-
     const user = users[username];
-    if (!user) {
-      alert("User not found.");
-      return;
-    }
 
+    // Hide auth container, show dashboard
     document.getElementById("authContainer").classList.add("hidden");
     const dash = document.getElementById("dashboard");
     dash.classList.remove("hidden");
@@ -214,35 +242,171 @@
       dash.innerHTML = `
         <h2>Admin Dashboard</h2>
         <p>Welcome, ${user.name}</p>
-        <p><strong>Wallet:</strong> ${user.walletNumber} | ${user.balance} ${user.currency}</p>
+        <p><strong>Wallet Number:</strong> ${user.walletNumber}</p>
+        <p><strong>Balance:</strong> ${user.balance} ${user.currency}</p>
 
         <h3>Registered Users</h3>
         <ul>
           ${Object.entries(users).map(([uname, u]) => `
-            <li><strong>${u.name}</strong> (${u.walletNumber}) - ${u.balance} ${u.currency}</li>`).join('')}
+            <li><strong>${u.name}</strong> (${u.walletNumber}) - ${u.balance} ${u.currency}</li>
+          `).join('')}
         </ul>
 
-        <button onclick="logout()">Logout</button>
+        <h3>Create Sub-Admin</h3>
+        <input type="text" id="subName" placeholder="Name" />
+        <input type="email" id="subEmail" placeholder="Email" />
+        <input type="password" id="subPassword" placeholder="Password" />
+        <button onclick="createSubAdmin()">Create Sub-Admin</button>
+
+        <button style="margin-top:20px;" onclick="logout()">Logout</button>
       `;
     } else {
       dash.innerHTML = `
-        <h2>Wallet Dashboard</h2>
-        <p><strong>Name:</strong> ${user.name}</p>
+        <h2>User Dashboard</h2>
+        <p>Welcome, ${user.name}</p>
         <p><strong>Wallet Number:</strong> ${user.walletNumber}</p>
         <p><strong>Balance:</strong> ${user.balance} ${user.currency}</p>
-        <button onclick="logout()">Logout</button>
+
+        <h3>Transfer Money</h3>
+        <input type="text" id="recipientWallet" placeholder="Recipient Wallet Number" />
+        <button onclick="loadRecipient()">Load Recipient Details</button>
+
+        <div id="recipientDetails"></div>
+
+        <input type="number" id="transferAmount" placeholder="Amount to send" min="1" />
+        <input type="password" id="authPin" placeholder="Your 4-digit PIN" maxlength="4" />
+        <button onclick="transfer()">Send</button>
+
+        <button style="margin-top:20px;" onclick="logout()">Logout</button>
       `;
     }
   }
 
-  function logout() {
-    sessionStorage.removeItem("loggedInUser");
-    location.reload();
+  // Create sub-admin (only admin can do this)
+  function createSubAdmin() {
+    const name = document.getElementById("subName").value.trim();
+    const email = document.getElementById("subEmail").value.trim();
+    const password = document.getElementById("subPassword").value.trim();
+    if (!name || !email || !password) {
+      alert("Fill all sub-admin fields");
+      return;
+    }
+    const username = name.toLowerCase().replace(/\s+/g, '');
+    if (users[username]) {
+      alert("Username already exists");
+      return;
+    }
+    users[username] = {
+      name,
+      email,
+      password,
+      pin: "0000",
+      currency: "KES",
+      walletNumber: "GALA" + Math.floor(1000 + Math.random() * 9000),
+      balance: 0,
+      isAdmin: false,
+      physicalWallet: 0,
+      transactionWallet: 0
+    };
+    saveUsers();
+    alert("Sub-admin created");
+    showDashboard();
   }
 
-  // If user already logged in, show dashboard
+  // Load recipient details by wallet number and display
+  function loadRecipient() {
+    const recipientWallet = document.getElementById("recipientWallet").value.trim().toUpperCase();
+    const recipientDetailsDiv = document.getElementById("recipientDetails");
+
+    if (!recipientWallet) {
+      alert("Enter recipient wallet number");
+      recipientDetailsDiv.innerHTML = "";
+      return;
+    }
+
+    const recipient = Object.values(users).find(u => u.walletNumber === recipientWallet);
+    if (!recipient) {
+      recipientDetailsDiv.innerHTML = "<p style='color:red;'>Recipient not found.</p>";
+      return;
+    }
+
+    recipientDetailsDiv.innerHTML = `
+      <p><strong>Name:</strong> ${recipient.name}</p>
+      <p><strong>Currency:</strong> ${recipient.currency}</p>
+      <p><strong>Wallet Number:</strong> ${recipient.walletNumber}</p>
+    `;
+  }
+
+  // Transfer money from logged in user to recipient
+  function transfer() {
+    const senderUsername = sessionStorage.getItem("loggedInUser");
+    if (!senderUsername || !users[senderUsername]) {
+      alert("Please login.");
+      return;
+    }
+    const sender = users[senderUsername];
+
+    const recipientWallet = document.getElementById("recipientWallet").value.trim().toUpperCase();
+    const amount = Number(document.getElementById("transferAmount").value);
+    const authPin = document.getElementById("authPin").value.trim();
+
+    if (!recipientWallet || !amount || amount <= 0) {
+      alert("Please enter valid recipient wallet and amount.");
+      return;
+    }
+    if (authPin.length !== 4 || authPin !== sender.pin) {
+      alert("Invalid PIN.");
+      return;
+    }
+    if (sender.walletNumber === recipientWallet) {
+      alert("Cannot send money to your own wallet.");
+      return;
+    }
+
+    const recipient = Object.values(users).find(u => u.walletNumber === recipientWallet);
+    if (!recipient) {
+      alert("Recipient not found.");
+      return;
+    }
+
+    if (sender.balance < amount) {
+      alert("Insufficient balance.");
+      return;
+    }
+
+    // Transaction charge: 1% for amount > 250 KES, max 1000 KES
+    let charge = 0;
+    if (amount > 250) {
+      charge = Math.min(amount * 0.01, 1000);
+    }
+
+    const totalDebit = amount + charge;
+    if (sender.balance < totalDebit) {
+      alert(`Insufficient balance to cover amount + transaction charge (${charge.toFixed(2)} ${sender.currency})`);
+      return;
+    }
+
+    // Deduct total from sender
+    sender.balance -= totalDebit;
+    // Credit recipient full amount
+    recipient.balance += amount;
+
+    // Track transaction and physical wallets (simplified)
+    sender.transactionWallet += amount;
+    sender.physicalWallet += charge;
+
+    saveUsers();
+
+    alert(`Transfer successful! Sent ${amount} ${sender.currency}. Transaction charge: ${charge.toFixed(2)} ${sender.currency}.`);
+
+    // Refresh dashboard to update balances
+    showDashboard();
+  }
+
+  // On page load, if logged in, show dashboard automatically
   window.onload = function () {
-    if (sessionStorage.getItem("loggedInUser")) {
+    const loggedInUser = sessionStorage.getItem("loggedInUser");
+    if (loggedInUser && users[loggedInUser]) {
       showDashboard();
     }
   };
