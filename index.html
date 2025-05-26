@@ -4,225 +4,212 @@
   <meta charset="UTF-8">
   <title>Wallet Platform</title>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; background: #f0f2f5; }
-    .section { display: none; padding: 20px; margin-top: 30px; background: white; border-radius: 8px; width: 90%; max-width: 600px; margin-left: auto; margin-right: auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; text-align: center; }
+    .section { display: none; background: white; border-radius: 8px; padding: 20px; margin: 20px auto; width: 90%; max-width: 600px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
     input, select { width: 90%; padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; }
-    button { padding: 10px 20px; margin: 10px 5px; border: none; border-radius: 4px; background: #007BFF; color: white; cursor: pointer; }
+    button { padding: 10px 20px; margin: 10px 5px; background: #007BFF; color: white; border: none; border-radius: 4px; cursor: pointer; }
     button:hover { background: #0056b3; }
-    #dashboardContent { text-align: left; }
     textarea { width: 100%; height: 150px; }
+    #dashboardContent { text-align: left; }
   </style>
 </head>
 <body>
-  <h1>💳 Wallet Platform</h1>
 
-  <div id="startSection" class="section" style="display:block">
-    <button onclick="showSection('loginSection')">Login</button>
-    <button onclick="showSection('registerSection')">Register</button>
-  </div>
+<h1>💳 Wallet Platform</h1>
 
-  <div id="loginSection" class="section">
-    <h2>Login</h2>
-    <input id="loginUsername" placeholder="Username"><br>
-    <input id="loginPassword" type="password" placeholder="Password"><br>
-    <button onclick="login()">Login</button>
-    <button onclick="showSection('startSection')">Back</button>
-  </div>
+<div id="startSection" class="section" style="display:block">
+  <button onclick="showSection('loginSection')">Login</button>
+  <button onclick="showSection('registerSection')">Register</button>
+</div>
 
-  <div id="registerSection" class="section">
-    <h2>Register</h2>
-    <input id="regSurname" placeholder="Surname"><br>
-    <input id="regMidname" placeholder="Middle Name (optional)"><br>
-    <input id="regFirstname" placeholder="First Name"><br>
-    <input id="regID" placeholder="ID/Passport Number"><br>
-    <input id="regPhone" placeholder="Phone Number"><br>
-    <input id="regEmail" placeholder="Email Address"><br>
-    <input id="regPassword" type="password" placeholder="Password"><br>
-    <input id="regPin" placeholder="PIN"><br>
-    <select id="regCountry"></select><br>
-    <select id="regCurrency">
-      <option value="KES">KES</option>
-      <option value="USD">USD</option>
-      <option value="JPY">JPY</option>
-      <option value="EUR">EUR</option>
-    </select><br>
-    <button onclick="register()">Register</button>
-    <button onclick="showSection('startSection')">Back</button>
-  </div>
+<div id="loginSection" class="section">
+  <h2>Login</h2>
+  <input id="loginUsername" placeholder="Username"><br>
+  <input id="loginPassword" type="password" placeholder="Password"><br>
+  <button onclick="login()">Login</button>
+  <button onclick="showSection('startSection')">Back</button>
+</div>
 
-  <div id="dashboardSection" class="section">
-    <h2>Dashboard</h2>
-    <div id="dashboardContent"></div>
-    <button onclick="logout()">Logout</button>
-  </div>
+<div id="registerSection" class="section">
+  <h2>Register</h2>
+  <input id="regSurname" placeholder="Surname"><br>
+  <input id="regMidname" placeholder="Middle Name (optional)"><br>
+  <input id="regFirstname" placeholder="First Name"><br>
+  <input id="regID" placeholder="ID/Passport Number"><br>
+  <input id="regPhone" placeholder="Phone Number"><br>
+  <input id="regEmail" placeholder="Email Address"><br>
+  <input id="regPassword" type="password" placeholder="Password"><br>
+  <input id="regPin" placeholder="PIN"><br>
+  <select id="regCountry"></select><br>
+  <select id="regCurrency">
+    <option value="KES">KES</option>
+    <option value="USD">USD</option>
+    <option value="JPY">JPY</option>
+    <option value="EUR">EUR</option>
+  </select><br>
+  <button onclick="register()">Register</button>
+  <button onclick="showSection('startSection')">Back</button>
+</div>
 
-  <script>
-    const users = {
-      admin: {
-        name: "Admin",
-        password: "adminpass",
-        pin: "0000",
-        balance: 500000,
-        email: "admin@wallet.com",
-        phone: "0000000000",
-        country: "KE",
-        currency: "KES",
-        wallet: "WADM001"
-      },
-      kilush: {
-        name: "Kilush",
-        password: "kilush123",
-        pin: "1111",
-        balance: 15000,
-        email: "kilush@email.com",
-        phone: "0700000000",
-        country: "KE",
-        currency: "KES",
-        wallet: "WKIL123"
-      },
-      schwadz: {
-        name: "Schwadz",
-        password: "schwadz123",
-        pin: "2222",
-        balance: 10000,
-        email: "schwadz@email.com",
-        phone: "0700000001",
-        country: "US",
-        currency: "USD",
-        wallet: "WSCH123"
-      },
-      moses: {
-        name: "Moses",
-        password: "moses123",
-        pin: "3333",
-        balance: 8000,
-        email: "moses@email.com",
-        phone: "0700000002",
-        country: "JP",
-        currency: "JPY",
-        wallet: "WMOS123"
-      }
+<div id="dashboardSection" class="section">
+  <h2>Dashboard</h2>
+  <div id="dashboardContent"></div>
+  <button onclick="logout()">Logout</button>
+</div>
+
+<script>
+  const users = {
+    admin: {
+      name: "Admin", password: "adminpass", pin: "0000", balance: 500000,
+      email: "admin@wallet.com", phone: "0000000000", country: "KE",
+      currency: "KES", wallet: "WADM001"
+    },
+    kilush: {
+      name: "Kilush", password: "kilush123", pin: "1111", balance: 15000,
+      email: "kilush@email.com", phone: "0700000000", country: "KE",
+      currency: "KES", wallet: "WKIL123"
+    },
+    schwadz: {
+      name: "Schwadz", password: "schwadz123", pin: "2222", balance: 10000,
+      email: "schwadz@email.com", phone: "0700000001", country: "US",
+      currency: "USD", wallet: "WSCH123"
+    },
+    moses: {
+      name: "Moses", password: "moses123", pin: "3333", balance: 8000,
+      email: "moses@email.com", phone: "0700000002", country: "JP",
+      currency: "JPY", wallet: "WMOS123"
+    }
+  };
+
+  const walletToUser = {};
+  for (let u in users) walletToUser[users[u].wallet] = u;
+
+  let currentUser = null;
+  const transactionLog = [];
+
+  function showSection(id) {
+    document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
+    document.getElementById(id).style.display = 'block';
+  }
+
+  function login() {
+    const username = document.getElementById("loginUsername").value.trim().toLowerCase();
+    const password = document.getElementById("loginPassword").value.trim();
+    if (users[username] && users[username].password === password) {
+      currentUser = username;
+      showDashboard();
+      showSection("dashboardSection");
+    } else {
+      alert("Invalid credentials.");
+    }
+  }
+
+  function logout() {
+    currentUser = null;
+    showSection("startSection");
+  }
+
+  function register() {
+    const surname = document.getElementById("regSurname").value.trim();
+    const mid = document.getElementById("regMidname").value.trim();
+    const fname = document.getElementById("regFirstname").value.trim();
+    const id = document.getElementById("regID").value.trim();
+    const phone = document.getElementById("regPhone").value.trim();
+    const email = document.getElementById("regEmail").value.trim();
+    const pass = document.getElementById("regPassword").value.trim();
+    const pin = document.getElementById("regPin").value.trim();
+    const country = document.getElementById("regCountry").value;
+    const currency = document.getElementById("regCurrency").value;
+
+    const username = id.toLowerCase();
+    if (users[username]) return alert("User already exists.");
+
+    const wallet = "W" + Math.random().toString(36).substr(2, 6).toUpperCase();
+    users[username] = {
+      name: `${surname} ${mid} ${fname}`.trim(),
+      password: pass,
+      pin: pin,
+      balance: 0,
+      email: email,
+      phone: phone,
+      country: country,
+      currency: currency,
+      wallet: wallet
     };
+    walletToUser[wallet] = username;
+    alert("Registration successful! Username: " + username);
+    showSection("loginSection");
+  }
 
-    const walletToUser = {};
-    for (const u in users) walletToUser[users[u].wallet] = u;
-    let currentUser = null;
-    const transactionLog = [];
-
-    function showSection(id) {
-      document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
-      document.getElementById(id).style.display = 'block';
-    }
-
-    function login() {
-      const username = document.getElementById("loginUsername").value.trim();
-      const password = document.getElementById("loginPassword").value.trim();
-      if (users[username] && users[username].password === password) {
-        currentUser = username;
-        showDashboard();
-        showSection("dashboardSection");
-      } else {
-        alert("Invalid credentials.");
-      }
-    }
-
-    function logout() {
-      currentUser = null;
-      showSection("startSection");
-    }
-
-    function register() {
-      const surname = document.getElementById("regSurname").value.trim();
-      const mid = document.getElementById("regMidname").value.trim();
-      const fname = document.getElementById("regFirstname").value.trim();
-      const id = document.getElementById("regID").value.trim();
-      const phone = document.getElementById("regPhone").value.trim();
-      const email = document.getElementById("regEmail").value.trim();
-      const pass = document.getElementById("regPassword").value.trim();
-      const pin = document.getElementById("regPin").value.trim();
-      const country = document.getElementById("regCountry").value;
-      const currency = document.getElementById("regCurrency").value;
-
-      const username = id.toLowerCase();
-      const wallet = "W" + Math.random().toString(36).substr(2, 6).toUpperCase();
-      if (users[username]) return alert("User already exists.");
-      users[username] = {
-        name: `${surname} ${mid} ${fname}`,
-        password: pass,
-        pin: pin,
-        balance: 0,
-        email: email,
-        phone: phone,
-        country: country,
-        currency: currency,
-        wallet: wallet
-      };
-      walletToUser[wallet] = username;
-      alert("Registration successful! Username: " + username);
-      showSection("loginSection");
-    }
-
-    async function getExchangeRate(from, to) {
-      if (from === to) return 1;
+  async function getExchangeRate(from, to) {
+    if (from === to) return 1;
+    try {
       const res = await fetch(`https://open.er-api.com/v6/latest/${from}`);
       const data = await res.json();
       return data.rates[to] || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function transfer() {
+    const sender = users[currentUser];
+    const recipientWallet = prompt("Enter recipient wallet number:");
+    const amount = parseFloat(prompt("Enter amount to send:"));
+    const pin = prompt("Enter your PIN:");
+
+    if (!walletToUser[recipientWallet]) return alert("Invalid wallet.");
+    if (pin !== sender.pin) return alert("Incorrect PIN.");
+    if (isNaN(amount) || amount <= 0) return alert("Invalid amount.");
+
+    const fee = Math.min(Math.ceil(amount * 0.01), 1000);
+    if (sender.balance < amount + fee) return alert("Insufficient funds.");
+
+    const receiver = users[walletToUser[recipientWallet]];
+    let convertedAmount = amount;
+    if (receiver.currency !== sender.currency) {
+      const rate = await getExchangeRate(sender.currency, receiver.currency);
+      if (!rate) return alert("Currency conversion failed.");
+      convertedAmount = amount * rate;
     }
 
-    async function transfer() {
-      const sender = users[currentUser];
-      const recipientWallet = prompt("Enter recipient wallet number:");
-      const amount = parseFloat(prompt("Enter amount to send:"));
-      const pin = prompt("Enter your PIN:");
+    sender.balance -= (amount + fee);
+    receiver.balance += convertedAmount;
 
-      if (!walletToUser[recipientWallet]) return alert("Invalid wallet.");
-      if (pin !== sender.pin) return alert("Incorrect PIN.");
-      if (isNaN(amount) || amount <= 0) return alert("Invalid amount.");
+    transactionLog.push(`${sender.name} ➡ ${receiver.name}: ${convertedAmount.toFixed(2)} ${receiver.currency} | Fee: ${fee} ${sender.currency}`);
+    alert("Transfer successful.");
+    showDashboard();
+  }
 
-      const fee = Math.min(Math.ceil(amount * 0.01), 1000);
-      if (sender.balance < amount + fee) return alert("Insufficient funds.");
-
-      const receiver = users[walletToUser[recipientWallet]];
-      let convertedAmount = amount;
-      if (receiver.currency !== sender.currency) {
-        const rate = await getExchangeRate(sender.currency, receiver.currency);
-        if (!rate) return alert("Currency conversion failed.");
-        convertedAmount = amount * rate;
+  function showDashboard() {
+    const user = users[currentUser];
+    const isAdmin = currentUser === "admin";
+    let html = `<p><strong>Welcome, ${user.name}</strong><br>Wallet: ${user.wallet}<br>Balance: ${user.balance.toFixed(2)} ${user.currency}</p>`;
+    html += `<button onclick="transfer()">Transfer Money</button>`;
+    if (isAdmin) {
+      html += `<h3>All Users</h3><ul>`;
+      for (const u in users) {
+        html += `<li>${users[u].name} - ${users[u].wallet} - ${users[u].balance.toFixed(2)} ${users[u].currency}</li>`;
       }
-
-      sender.balance -= (amount + fee);
-      receiver.balance += convertedAmount;
-      transactionLog.push(`${sender.name} sent ${convertedAmount.toFixed(2)} ${receiver.currency} to ${receiver.name}. Fee: ${fee} ${sender.currency}`);
-      alert("Transfer successful.");
-      showDashboard();
+      html += `</ul>`;
     }
+    html += `<h3>Transaction Logs</h3><textarea readonly>${transactionLog.join('\n')}</textarea>`;
+    document.getElementById("dashboardContent").innerHTML = html;
+  }
 
-    function showDashboard() {
-      const user = users[currentUser];
-      const isAdmin = currentUser === "admin";
-      let html = `<p><strong>Welcome, ${user.name}</strong><br>Wallet: ${user.wallet}<br>Balance: ${user.balance.toFixed(2)} ${user.currency}</p>`;
-      html += `<button onclick="transfer()">Transfer Money</button>`;
-      if (isAdmin) {
-        html += `<h3>All Users</h3><ul>`;
-        for (const u in users) {
-          html += `<li>${users[u].name} - ${users[u].wallet} - ${users[u].balance.toFixed(2)} ${users[u].currency}</li>`;
-        }
-        html += `</ul>`;
-      }
-      html += `<h3>Transaction Logs</h3><textarea readonly>${transactionLog.join('\n')}</textarea>`;
-      document.getElementById("dashboardContent").innerHTML = html;
-    }
+  const countries = {
+    "KE": "Kenya", "US": "United States", "JP": "Japan",
+    "GB": "United Kingdom", "NG": "Nigeria", "DE": "Germany",
+    "IN": "India", "CN": "China", "ZA": "South Africa", "FR": "France"
+  };
 
-    const countries = {
-      "KE": "Kenya", "US": "United States", "JP": "Japan", "GB": "United Kingdom", "NG": "Nigeria", "DE": "Germany", "IN": "India", "CN": "China", "ZA": "South Africa", "FR": "France"
-    };
-    const countrySelect = document.getElementById("regCountry");
-    for (const code in countries) {
-      const option = document.createElement("option");
-      option.value = code;
-      option.textContent = countries[code];
-      countrySelect.appendChild(option);
-    }
-  </script>
+  const countrySelect = document.getElementById("regCountry");
+  for (let code in countries) {
+    const option = document.createElement("option");
+    option.value = code;
+    option.textContent = countries[code];
+    countrySelect.appendChild(option);
+  }
+</script>
 </body>
 </html>
