@@ -1,163 +1,306 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Wallet Platform</title>
   <style>
-    body { font-family: Arial; padding: 20px; }
-    #dashboard, #transfer-section, #admin-section { display: none; margin-top: 20px; }
+    body { font-family: Arial; padding: 20px; background: #f4f4f4; }
     .hidden { display: none; }
-    select, input { padding: 5px; margin: 5px 0; width: 100%; }
-    button { padding: 8px 16px; margin-top: 10px; }
+    .box, .dashboard { background: white; padding: 20px; border-radius: 10px; max-width: 800px; margin: auto; margin-bottom: 20px; }
+    input, button, select { display: block; width: 100%; padding: 10px; margin: 10px 0; }
+    canvas { width: 100%; height: 200px; margin: 20px 0; }
   </style>
 </head>
 <body>
-
-  <h2>Login</h2>
-  <input id="login-username" placeholder="Username">
-  <input id="login-password" placeholder="Password" type="password">
-  <button onclick="login()">Login</button>
-
-  <div id="dashboard">
-    <h2>Welcome, <span id="user-display"></span></h2>
-    <p><b>Wallet Number:</b> <span id="wallet-number"></span></p>
-    <p><b>Balance:</b> <span id="user-balance"></span></p>
-    <button onclick="logout()">Logout</button>
-
-    <div id="transfer-section">
-      <h3>Send Money</h3>
-      <input id="recipient-wallet" placeholder="Recipient Wallet Number">
-      <input id="amount" type="number" placeholder="Amount to Send">
-      <select id="currency-from"></select>
-      <select id="currency-to"></select>
-      <button onclick="transfer()">Send</button>
-      <p id="conversion-info"></p>
-    </div>
-
-    <div id="admin-section">
-      <h3>Admin Panel</h3>
-      <pre id="admin-data"></pre>
-    </div>
+  <div id="startPage" class="box">
+    <h2>Welcome to Wallet Platform</h2>
+    <button onclick="showLogin()">Login</button>
+    <button onclick="showRegister()">Register</button>
   </div>
 
-  <script>
-    const predefinedUsers = {
-      kilush: { password: '1234', balance: 10000, wallet: 'WALLET-KIL123', currency: 'KES' },
-      schwadz: { password: '4321', balance: 12000, wallet: 'WALLET-SCH321', currency: 'USD' },
-      moses: { password: '2468', balance: 8500, wallet: 'WALLET-MOS468', currency: 'EUR' },
-      admin: { password: 'adminpass', balance: 99999, wallet: 'WALLET-ADM001', currency: 'USD', admin: true }
+  <div id="loginPage" class="box hidden">
+    <h2>Login</h2>
+    <input id="loginUsername" placeholder="Username" />
+    <input id="loginPassword" type="password" placeholder="Password" />
+    <button onclick="login()">Log In</button>
+    <button onclick="showStart()">Back</button>
+  </div>
+
+  <div id="registerPage" class="box hidden">
+    <h2>Register</h2>
+    <input id="regSurname" placeholder="Surname" />
+    <input id="regMiddle" placeholder="Middle Name (optional)" />
+    <input id="regFirst" placeholder="First Name" />
+    <input id="regID" placeholder="ID/Passport Number" />
+    <input id="regPhone" placeholder="Phone Number" />
+    <input id="regEmail" placeholder="Email Address" />
+    <input id="regPassword" type="password" placeholder="Password" />
+    <input id="regPin" type="password" placeholder="Transaction PIN" />
+    <button onclick="register()">Register</button>
+    <button onclick="showStart()">Back</button>
+  </div>
+
+  <div id="userDashboard" class="dashboard hidden">
+    <h2>User Dashboard</h2>
+    <div id="userInfo"></div>
+    <input id="recipientWallet" placeholder="Recipient Wallet Number" />
+    <input id="amount" placeholder="Amount" />
+    <input id="confirmPin" type="password" placeholder="Enter PIN" />
+    <button onclick="transfer()">Send Money</button>
+    <h3>Transaction Log:</h3>
+    <pre id="transactionLog"></pre>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <div id="adminDashboard" class="dashboard hidden">
+    <h2>Admin Dashboard</h2>
+    <div id="adminView"></div>
+    <canvas id="currencyGraph"></canvas>
+    <h3>Trading Wallet Balance: <span id="tradingWalletBalance">1000000 KES</span></h3>
+
+    <h3>Send Money from Admin Wallet</h3>
+    <input id="adminRecipientWallet" placeholder="Recipient Wallet Number" />
+    <input id="adminAmount" placeholder="Amount" />
+    <input id="adminPin" type="password" placeholder="Enter Admin PIN" />
+    <button onclick="adminTransfer()">Send</button>
+
+    <h3>Create Sub-Admin</h3>
+    <input id="subAdminUsername" placeholder="Username" />
+    <input id="subAdminPassword" type="password" placeholder="Password" />
+    <input id="subAdminPin" placeholder="PIN" />
+    <button onclick="createSubAdmin()">Create Sub Admin</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const users = {
+    admin: { password: "admin123", pin: "0000", balance: 1000000, wallet: "ADM001", role: "admin", name: "Administrator", currency: "KES" },
+    kilush: { password: "pass123", pin: "1111", balance: 5000, wallet: "KIL001", role: "user", name: "Kilush Kamau", currency: "KES" },
+    schwadz: { password: "pass123", pin: "2222", balance: 57.00, wallet: "SCH001", role: "user", name: "Schwadz M", currency: "USD" },
+    moses: { password: "pass123", pin: "3333", balance: 3630.00, wallet: "MOS001", role: "user", name: "Moses L", currency: "JPY" },
+  };
+
+  const walletToUser = {};
+  for (let username in users) {
+    walletToUser[users[username].wallet] = username;
+  }
+
+  let currentUser = null;
+  let transactionLog = [];
+
+  window.onload = () => {
+    const saved = sessionStorage.getItem("loggedUser");
+    if (saved && users[saved]) {
+      currentUser = saved;
+      showDashboard();
+    } else {
+      showStart();
+    }
+  };
+
+  function showStart() {
+    hideAll();
+    document.getElementById("startPage").classList.remove("hidden");
+  }
+
+  function showLogin() {
+    hideAll();
+    document.getElementById("loginPage").classList.remove("hidden");
+  }
+
+  function showRegister() {
+    hideAll();
+    document.getElementById("registerPage").classList.remove("hidden");
+  }
+
+  function login() {
+    const username = document.getElementById("loginUsername").value.trim();
+    const password = document.getElementById("loginPassword").value.trim();
+    if (users[username] && users[username].password === password) {
+      currentUser = username;
+      sessionStorage.setItem("loggedUser", username);
+      showDashboard();
+    } else {
+      alert("Invalid login.");
+    }
+  }
+
+  function register() {
+    const surname = document.getElementById("regSurname").value.trim();
+    const middle = document.getElementById("regMiddle").value.trim();
+    const first = document.getElementById("regFirst").value.trim();
+    const id = document.getElementById("regID").value.trim();
+    const phone = document.getElementById("regPhone").value.trim();
+    const email = document.getElementById("regEmail").value.trim();
+    const password = document.getElementById("regPassword").value.trim();
+    const pin = document.getElementById("regPin").value.trim();
+
+    if (!surname || !first || !id || !phone || !email || !password || !pin) {
+      alert("All required fields must be filled.");
+      return;
+    }
+
+    const username = id;
+    if (users[username]) {
+      alert("User already exists.");
+      return;
+    }
+
+    const wallet = "USR" + Math.floor(Math.random() * 10000);
+    users[username] = {
+      password, pin, balance: 0, wallet, role: "user",
+      name: `${surname} ${middle} ${first}`.trim(),
+      currency: "KES"
     };
+    walletToUser[wallet] = username;
+    alert(`Registration successful! Your username is ${username}`);
+    showLogin();
+  }
 
-    let currentUser = null;
+  function showDashboard() {
+    hideAll();
+    const user = users[currentUser];
+    if (!user) return;
 
-    function populateCurrencyDropdowns() {
-      const currencies = [
-        { country: 'Kenya', code: 'KES' },
-        { country: 'USA', code: 'USD' },
-        { country: 'Eurozone', code: 'EUR' },
-        { country: 'UK', code: 'GBP' },
-        { country: 'Japan', code: 'JPY' },
-        { country: 'China', code: 'CNY' },
-        { country: 'India', code: 'INR' },
-        { country: 'Canada', code: 'CAD' },
-        { country: 'Australia', code: 'AUD' },
-        { country: 'Nigeria', code: 'NGN' },
-        { country: 'Tanzania', code: 'TZS' },
-        { country: 'Uganda', code: 'UGX' },
-        { country: 'South Africa', code: 'ZAR' }
-      ];
+    if (user.role === "admin") {
+      document.getElementById("adminDashboard").classList.remove("hidden");
+      renderAdminView();
+      renderCurrencyGraph();
+      document.getElementById("tradingWalletBalance").innerText = `${user.balance} ${user.currency}`;
+    } else {
+      document.getElementById("userDashboard").classList.remove("hidden");
+      document.getElementById("userInfo").innerHTML = `
+        <b>Name:</b> ${user.name}<br>
+        <b>Wallet:</b> ${user.wallet}<br>
+        <b>Balance:</b> ${user.balance} ${user.currency}
+      `;
+      displayTransactionLog();
+    }
+  }
 
-      const from = document.getElementById('currency-from');
-      const to = document.getElementById('currency-to');
-      currencies.forEach(c => {
-        const opt1 = new Option(`${c.country} (${c.code})`, c.code);
-        const opt2 = new Option(`${c.country} (${c.code})`, c.code);
-        from.add(opt1);
-        to.add(opt2);
-      });
-      from.value = 'KES';
-      to.value = 'USD';
+  function logout() {
+    currentUser = null;
+    sessionStorage.removeItem("loggedUser");
+    showStart();
+  }
+
+  function transfer() {
+    const sender = users[currentUser];
+    const recipientWallet = document.getElementById("recipientWallet").value.trim();
+    const amount = parseFloat(document.getElementById("amount").value.trim());
+    const pin = document.getElementById("confirmPin").value.trim();
+
+    if (!walletToUser[recipientWallet]) return alert("Invalid wallet.");
+    if (pin !== sender.pin) return alert("Incorrect PIN.");
+    if (isNaN(amount) || amount <= 0) return alert("Enter valid amount.");
+
+    const recipient = users[walletToUser[recipientWallet]];
+    if (recipient.currency !== sender.currency) return alert("Currency mismatch!");
+
+    const now = Date.now();
+    if (now - (sender.lastTx || 0) < 60000 && sender.lastDetails === `${recipientWallet}-${amount}`) {
+      return alert("Wait a minute before repeating the same transfer.");
     }
 
-    function login() {
-      const uname = document.getElementById('login-username').value.toLowerCase();
-      const pwd = document.getElementById('login-password').value;
+    let fee = Math.min(Math.ceil(amount * 0.01), 1000);
+    if (sender.balance < amount + fee) return alert("Insufficient funds.");
 
-      const user = predefinedUsers[uname];
-      if (user && user.password === pwd) {
-        currentUser = uname;
-        document.getElementById('user-display').innerText = uname;
-        document.getElementById('wallet-number').innerText = user.wallet;
-        document.getElementById('user-balance').innerText = `${user.balance.toFixed(2)} ${user.currency}`;
-        document.getElementById('dashboard').style.display = 'block';
-        document.getElementById('transfer-section').style.display = 'block';
-        if (user.admin) {
-          document.getElementById('admin-section').style.display = 'block';
-          loadAdminData();
+    sender.balance -= (amount + fee);
+    recipient.balance += amount;
+    sender.lastTx = now;
+    sender.lastDetails = `${recipientWallet}-${amount}`;
+
+    transactionLog.push(`${sender.name} sent ${amount} ${sender.currency} to ${recipient.name}. Fee: ${fee}`);
+    alert("Transfer successful!");
+    showDashboard();
+  }
+
+  function adminTransfer() {
+    const admin = users["admin"];
+    const recipientWallet = document.getElementById("adminRecipientWallet").value.trim();
+    const amount = parseFloat(document.getElementById("adminAmount").value.trim());
+    const pin = document.getElementById("adminPin").value.trim();
+
+    if (!walletToUser[recipientWallet]) return alert("Invalid wallet.");
+    if (pin !== admin.pin) return alert("Incorrect PIN.");
+    if (isNaN(amount) || amount <= 0) return alert("Enter valid amount.");
+
+    const recipient = users[walletToUser[recipientWallet]];
+    if (recipient.currency !== admin.currency) return alert("Currency mismatch!");
+
+    if (admin.balance < amount) return alert("Insufficient funds.");
+
+    admin.balance -= amount;
+    recipient.balance += amount;
+
+    transactionLog.push(`Admin sent ${amount} KES to ${recipient.name}`);
+    alert("Transfer complete.");
+    showDashboard();
+  }
+
+  function createSubAdmin() {
+    const username = document.getElementById("subAdminUsername").value.trim();
+    const password = document.getElementById("subAdminPassword").value.trim();
+    const pin = document.getElementById("subAdminPin").value.trim();
+
+    if (!username || !password || !pin) {
+      return alert("Fill all fields");
+    }
+
+    if (users[username]) return alert("User exists");
+
+    const wallet = "SUB" + Math.floor(Math.random() * 10000);
+    users[username] = { password, pin, balance: 0, wallet, role: "subadmin", name: username, currency: "KES" };
+    walletToUser[wallet] = username;
+    alert("Sub-admin created.");
+  }
+
+  function renderAdminView() {
+    let html = "<h3>All Users</h3><ul>";
+    for (let u in users) {
+      html += `<li>${u} (${users[u].wallet}) - ${users[u].balance} ${users[u].currency} [${users[u].role}]</li>`;
+    }
+    html += "</ul>";
+    document.getElementById("adminView").innerHTML = html;
+  }
+
+  function renderCurrencyGraph() {
+    const ctx = document.getElementById('currencyGraph').getContext('2d');
+    const currencySums = {};
+
+    for (let u in users) {
+      const cur = users[u].currency;
+      currencySums[cur] = (currencySums[cur] || 0) + users[u].balance;
+    }
+
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(currencySums),
+        datasets: [{
+          label: 'Total by Currency',
+          data: Object.values(currencySums),
+          backgroundColor: ['#0074D9', '#2ECC40', '#FF4136'],
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true }
         }
-      } else {
-        alert("Invalid credentials");
       }
-    }
+    });
+  }
 
-    function logout() {
-      currentUser = null;
-      document.getElementById('dashboard').style.display = 'none';
-      document.getElementById('login-username').value = '';
-      document.getElementById('login-password').value = '';
-    }
+  function displayTransactionLog() {
+    document.getElementById("transactionLog").textContent = transactionLog.join("\n");
+  }
 
-    async function transfer() {
-      const recipientWallet = document.getElementById('recipient-wallet').value.trim();
-      const amount = parseFloat(document.getElementById('amount').value);
-      const fromCurrency = document.getElementById('currency-from').value;
-      const toCurrency = document.getElementById('currency-to').value;
-
-      if (!recipientWallet || isNaN(amount)) {
-        alert("Fill all fields");
-        return;
-      }
-
-      const recipient = Object.entries(predefinedUsers).find(([_, data]) => data.wallet === recipientWallet);
-      if (!recipient) {
-        alert("Recipient not found");
-        return;
-      }
-
-      const sender = predefinedUsers[currentUser];
-      if (sender.balance < amount) {
-        alert("Insufficient balance");
-        return;
-      }
-
-      try {
-        const res = await fetch(`https://api.exchangerate.host/convert?from=${fromCurrency}&to=${toCurrency}&amount=${amount}`);
-        const data = await res.json();
-        const convertedAmount = data.result;
-
-        sender.balance -= amount;
-        recipient[1].balance += convertedAmount;
-
-        document.getElementById('user-balance').innerText = `${sender.balance.toFixed(2)} ${fromCurrency}`;
-        document.getElementById('conversion-info').innerText = `Converted: ${amount} ${fromCurrency} → ${convertedAmount.toFixed(2)} ${toCurrency}`;
-
-        if (sender.admin) loadAdminData();
-
-      } catch (err) {
-        alert("Currency conversion failed");
-      }
-    }
-
-    function loadAdminData() {
-      let output = "=== USER BALANCES ===\n";
-      for (const [user, data] of Object.entries(predefinedUsers)) {
-        output += `${user}: ${data.balance.toFixed(2)} ${data.currency} | ${data.wallet}\n`;
-      }
-      document.getElementById('admin-data').innerText = output;
-    }
-
-    populateCurrencyDropdowns();
-  </script>
-
+  function hideAll() {
+    document.querySelectorAll(".box, .dashboard").forEach(div => div.classList.add("hidden"));
+  }
+</script>
 </body>
 </html>
