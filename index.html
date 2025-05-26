@@ -45,7 +45,6 @@
       <option value="USD">USD</option>
       <option value="JPY">JPY</option>
       <option value="EUR">EUR</option>
-      <option value="GBP">GBP</option>
     </select><br>
     <button onclick="register()">Register</button>
     <button onclick="showSection('startSection')">Back</button>
@@ -66,8 +65,8 @@
         balance: 500000,
         email: "admin@wallet.com",
         phone: "0000000000",
-        country: "GB",
-        currency: "GBP",
+        country: "KE",
+        currency: "KES",
         wallet: "WADM001"
       },
       kilush: {
@@ -165,14 +164,9 @@
 
     async function getExchangeRate(from, to) {
       if (from === to) return 1;
-      try {
-        const res = await fetch(`https://api.exchangerate.host/latest?base=${from}&symbols=${to}`);
-        const data = await res.json();
-        return data.rates[to] || null;
-      } catch (error) {
-        console.error("Exchange rate fetch error:", error);
-        return null;
-      }
+      const res = await fetch(`https://open.er-api.com/v6/latest/${from}`);
+      const data = await res.json();
+      return data.rates[to] || null;
     }
 
     async function transfer() {
@@ -211,6 +205,24 @@
       if (isAdmin) {
         html += `<h3>All Users</h3><ul>`;
         for (const u in users) {
-          html += `<li>${users[u].name} - ${users[u].wallet} - ${users[u].balance.toFixed(
-::contentReference[oaicite:33]{index=33}
- 
+          html += `<li>${users[u].name} - ${users[u].wallet} - ${users[u].balance.toFixed(2)} ${users[u].currency}</li>`;
+        }
+        html += `</ul>`;
+      }
+      html += `<h3>Transaction Logs</h3><textarea readonly>${transactionLog.join('\n')}</textarea>`;
+      document.getElementById("dashboardContent").innerHTML = html;
+    }
+
+    const countries = {
+      "KE": "Kenya", "US": "United States", "JP": "Japan", "GB": "United Kingdom", "NG": "Nigeria", "DE": "Germany", "IN": "India", "CN": "China", "ZA": "South Africa", "FR": "France"
+    };
+    const countrySelect = document.getElementById("regCountry");
+    for (const code in countries) {
+      const option = document.createElement("option");
+      option.value = code;
+      option.textContent = countries[code];
+      countrySelect.appendChild(option);
+    }
+  </script>
+</body>
+</html>
