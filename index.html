@@ -2,205 +2,227 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Wallet Platform</title>
+  <title>Wallet Transfer Platform</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f0f0f0; margin: 0; }
-    .container, .dashboard, .admin-panel {
-      max-width: 600px; margin: 30px auto; background: #fff;
-      padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    input, button, select {
-      width: 100%; padding: 10px; margin: 10px 0;
-    }
-    .logout { background: red; color: #fff; border: none; padding: 5px 10px; float: right; }
-    .success { color: green; }
-    .error { color: red; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; }
+    input, select, button { display: block; margin: 10px 0; padding: 8px; width: 100%; max-width: 300px; }
+    #recipientDetails { margin-top: 10px; }
   </style>
 </head>
 <body>
 
-<div class="container" id="loginForm">
-  <h2>Login to Wallet</h2>
-  <input type="text" id="username" placeholder="Username" />
-  <input type="password" id="password" placeholder="Password" />
+<!-- Login Section -->
+<div id="loginSection">
+  <h2>Login</h2>
+  <input type="text" id="loginUsername" placeholder="Username" />
+  <input type="password" id="loginPassword" placeholder="Password" />
   <button onclick="login()">Login</button>
-  <p class="error" id="loginError"></p>
+  <p>No account? <a href="#" onclick="showRegister()">Register here</a></p>
 </div>
 
-<div class="dashboard" id="dashboard" style="display:none;">
-  <button class="logout" onclick="logout()">Logout</button>
-  <h2 id="welcome"></h2>
-  <p><strong>Email:</strong> <span id="userEmail"></span></p>
-  <p><strong>Wallet:</strong> <span id="walletNumber"></span></p>
-  <p><strong>Balance:</strong> <span id="balance"></span> KES</p>
-
-  <h3>Send Money</h3>
-  <select id="recipient">
-    <option value="">Select recipient</option>
+<!-- Registration Section -->
+<div id="registerSection" style="display:none;">
+  <h2>Register</h2>
+  <input type="text" id="regName" placeholder="Full Name" />
+  <input type="text" id="regUsername" placeholder="Username" />
+  <input type="password" id="regPassword" placeholder="Password" />
+  <input type="text" id="regPin" placeholder="4-digit PIN" maxlength="4" />
+  <select id="regCurrency">
+    <option value="KES">KES</option>
+    <option value="USD">USD</option>
+    <option value="EUR">EUR</option>
+    <option value="JPY">JPY</option>
   </select>
-  <input type="number" id="amount" placeholder="Amount" />
-  <button onclick="transferMoney()">Send</button>
-  <p id="transferStatus"></p>
-
-  <h3>My Transactions</h3>
-  <div id="userTransactions"></div>
+  <button onclick="register()">Register</button>
+  <p>Have account? <a href="#" onclick="showLogin()">Login here</a></p>
 </div>
 
-<div class="admin-panel" id="adminPanel" style="display:none;">
-  <h3>Admin Panel</h3>
-  <p><strong>Total Users:</strong> <span id="totalUsers"></span></p>
-  <p><strong>Total Balance:</strong> <span id="totalFunds"></span> KES</p>
-  <button onclick="downloadCSV()">Export All Transactions</button>
-  <h4>All Transactions</h4>
-  <div id="adminTransactions"></div>
+<!-- Dashboard Section -->
+<div id="dashboard" style="display:none;">
+  <h2 id="welcomeMsg"></h2>
+  <p><strong>Wallet Number:</strong> <span id="walletNum"></span></p>
+  <p><strong>Balance:</strong> <span id="balance"></span></p>
+
+  <h3>Make a Transfer</h3>
+  <label for="transferType">Transfer Type:</label>
+  <select id="transferType" onchange="updateTransferForm()">
+    <option value="wallet">Other Wallet (platform)</option>
+    <option value="mobile">Mobile Banking</option>
+    <option value="bank">Bank Account</option>
+  </select>
+
+  <div id="transferForm"></div>
+  <button onclick="submitTransfer()">Send</button>
+  <button onclick="logout()" style="margin-top:20px;">Logout</button>
 </div>
 
 <script>
-const users = {
-  kilush: { password: "kilush123", email: "kilush@example.com", wallet: "WAL123", balance: 14000, currency: "KES", transactions: [] },
-  schwadz: { password: "schwadz123", email: "schwadz@example.com", wallet: "WAL654", balance: 75000, currency: "KES", transactions: [] },
-  admin: { password: "admin123", email: "admin@wallet.com", wallet: "ADMIN001", balance: 1000000, currency: "KES", transactions: [] }
-};
+  const exchangeRates = { KES: 1, USD: 145, EUR: 160, JPY: 1.1 };
+  let users = JSON.parse(localStorage.getItem("users") || "{}");
 
-function login() {
-  const uname = document.getElementById("username").value.toLowerCase().trim();
-  const pwd = document.getElementById("password").value;
-  const err = document.getElementById("loginError");
-  if (!uname || !pwd) return err.textContent = "Enter both username and password.";
-  if (!users[uname] || users[uname].password !== pwd) return err.textContent = "Invalid credentials.";
-  localStorage.setItem("user", uname);
-  showDashboard();
-}
+  function saveUsers() {
+    localStorage.setItem("users", JSON.stringify(users));
+  }
 
-function logout() {
-  localStorage.removeItem("user");
-  location.reload();
-}
+  function showLogin() {
+    document.getElementById("loginSection").style.display = "block";
+    document.getElementById("registerSection").style.display = "none";
+    document.getElementById("dashboard").style.display = "none";
+  }
 
-function showDashboard() {
-  const uname = localStorage.getItem("user");
-  if (!uname || !users[uname]) return;
-  const user = users[uname];
-  document.getElementById("loginForm").style.display = "none";
-  document.getElementById("dashboard").style.display = "block";
-  document.getElementById("welcome").textContent = `Welcome, ${uname.toUpperCase()}!`;
-  document.getElementById("userEmail").textContent = user.email;
-  document.getElementById("walletNumber").textContent = user.wallet;
-  document.getElementById("balance").textContent = user.balance.toLocaleString();
+  function showRegister() {
+    document.getElementById("loginSection").style.display = "none";
+    document.getElementById("registerSection").style.display = "block";
+    document.getElementById("dashboard").style.display = "none";
+  }
 
-  const recipientSelect = document.getElementById("recipient");
-  recipientSelect.innerHTML = '<option value="">Select recipient</option>';
-  for (let u in users) {
-    if (u !== uname) {
-      recipientSelect.innerHTML += `<option value="${u}">${u.toUpperCase()}</option>`;
+  function showDashboard() {
+    const username = sessionStorage.getItem("loggedInUser");
+    if (!username || !users[username]) return showLogin();
+    const user = users[username];
+
+    document.getElementById("loginSection").style.display = "none";
+    document.getElementById("registerSection").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
+
+    document.getElementById("welcomeMsg").innerText = `Welcome, ${user.name}`;
+    document.getElementById("walletNum").innerText = user.walletNumber;
+    document.getElementById("balance").innerText = `${user.balance.toFixed(2)} ${user.currency}`;
+    updateTransferForm();
+  }
+
+  function login() {
+    const username = document.getElementById("loginUsername").value.trim().toLowerCase();
+    const password = document.getElementById("loginPassword").value;
+    if (!username || !password || !users[username] || users[username].password !== password) {
+      return alert("Invalid username or password");
+    }
+    sessionStorage.setItem("loggedInUser", username);
+    showDashboard();
+  }
+
+  function register() {
+    const name = document.getElementById("regName").value.trim();
+    const username = document.getElementById("regUsername").value.trim().toLowerCase();
+    const password = document.getElementById("regPassword").value;
+    const pin = document.getElementById("regPin").value;
+    const currency = document.getElementById("regCurrency").value;
+
+    if (!name || !username || !password || !/^\d{4}$/.test(pin)) return alert("Fill all fields properly");
+    if (users[username]) return alert("Username already exists");
+
+    const walletNumber = "GALA" + Math.floor(1000 + Math.random() * 9000);
+    users[username] = { name, password, pin, currency, walletNumber, balance: 0 };
+    saveUsers();
+    alert("Registration successful!");
+    showLogin();
+  }
+
+  function logout() {
+    sessionStorage.removeItem("loggedInUser");
+    showLogin();
+  }
+
+  function updateTransferForm() {
+    const type = document.getElementById("transferType").value;
+    const formDiv = document.getElementById("transferForm");
+    formDiv.innerHTML = "";
+
+    if (type === "wallet") {
+      formDiv.innerHTML = `
+        <input type="text" id="recipientWallet" placeholder="Recipient Wallet Number" />
+        <button type="button" onclick="loadRecipientDetails()">Load Recipient Details</button>
+        <div id="recipientDetails"></div>
+        <input type="number" id="transferAmount" placeholder="Amount to Send" min="1" />
+        <input type="password" id="authPin" placeholder="Your 4-digit PIN" maxlength="4" />
+      `;
+    } else if (type === "mobile") {
+      formDiv.innerHTML = `
+        <input type="text" id="mobileNumber" placeholder="07XXXXXXXX" />
+        <input type="number" id="transferAmount" placeholder="Amount to Send" min="1" />
+        <input type="password" id="authPin" placeholder="Your 4-digit PIN" maxlength="4" />
+      `;
+    } else if (type === "bank") {
+      formDiv.innerHTML = `
+        <input type="text" id="bankAccountNumber" placeholder="Bank Account Number" />
+        <input type="text" id="bankName" placeholder="Bank Name" />
+        <input type="number" id="transferAmount" placeholder="Amount to Send" min="1" />
+        <input type="password" id="authPin" placeholder="Your 4-digit PIN" maxlength="4" />
+      `;
     }
   }
 
-  displayUserTransactions(uname);
-
-  if (uname === "admin") showAdminPanel();
-}
-
-function transferMoney() {
-  const senderName = localStorage.getItem("user");
-  const recipientName = document.getElementById("recipient").value;
-  const amount = parseFloat(document.getElementById("amount").value);
-  const status = document.getElementById("transferStatus");
-
-  if (!recipientName || isNaN(amount) || amount <= 0) {
-    status.textContent = "❌ Invalid recipient or amount.";
-    return;
+  function loadRecipientDetails() {
+    const recipientWallet = document.getElementById("recipientWallet").value.trim().toUpperCase();
+    const detailsDiv = document.getElementById("recipientDetails");
+    const recipient = Object.values(users).find(u => u.walletNumber === recipientWallet);
+    if (!recipient) {
+      detailsDiv.innerHTML = "<p style='color:red;'>Recipient not found</p>";
+    } else {
+      detailsDiv.innerHTML = `
+        <p><strong>Name:</strong> ${recipient.name}</p>
+        <p><strong>Currency:</strong> ${recipient.currency}</p>
+        <p><strong>Wallet Number:</strong> ${recipient.walletNumber}</p>
+      `;
+    }
   }
 
-  const sender = users[senderName];
-  const recipient = users[recipientName];
-
-  let fee = 0;
-  if (amount > 200) {
-    fee = Math.min(0.0074 * amount, 1000);
+  function toKES(amount, currency) {
+    return amount * (exchangeRates[currency] || 1);
   }
 
-  const total = amount + fee;
-
-  if (sender.balance < total) {
-    status.textContent = "❌ Insufficient balance.";
-    return;
+  function fromKES(kesAmount, currency) {
+    return kesAmount / (exchangeRates[currency] || 1);
   }
 
-  sender.balance -= total;
-  recipient.balance += amount;
+  function submitTransfer() {
+    const username = sessionStorage.getItem("loggedInUser");
+    const user = users[username];
+    const type = document.getElementById("transferType").value;
+    const pin = document.getElementById("authPin")?.value.trim();
+    const amount = Number(document.getElementById("transferAmount")?.value);
 
-  const tx = {
-    from: senderName,
-    to: recipientName,
-    amount,
-    fee,
-    timestamp: new Date().toLocaleString()
+    if (!pin || pin !== user.pin || !amount || amount <= 0) return alert("Check PIN and amount");
+
+    let chargeKES = Math.min(toKES(amount, user.currency) * 0.0075, 1000);
+    let charge = fromKES(chargeKES, user.currency);
+    let total = amount + charge;
+
+    if (user.balance < total) return alert(`Insufficient balance. Need ${total.toFixed(2)} including fee.`);
+
+    if (type === "wallet") {
+      const walletID = document.getElementById("recipientWallet").value.trim().toUpperCase();
+      if (walletID === user.walletNumber) return alert("Cannot send to your own wallet");
+      const recipient = Object.values(users).find(u => u.walletNumber === walletID);
+      if (!recipient) return alert("Recipient not found");
+
+      user.balance -= total;
+      recipient.balance += amount;
+      alert(`Sent ${amount} ${user.currency}. Fee: ${charge.toFixed(2)} ${user.currency}`);
+
+    } else if (type === "mobile") {
+      const mobile = document.getElementById("mobileNumber").value.trim();
+      if (!/^07\d{8}$/.test(mobile)) return alert("Invalid mobile number");
+      user.balance -= total;
+      alert(`Mobile transfer to ${mobile} simulated. Fee: ${charge.toFixed(2)} ${user.currency}`);
+
+    } else if (type === "bank") {
+      const acc = document.getElementById("bankAccountNumber").value.trim();
+      const bank = document.getElementById("bankName").value.trim();
+      if (!acc || !bank) return alert("Enter bank account and name");
+      user.balance -= total;
+      alert(`Bank transfer to ${acc} at ${bank} simulated. Fee: ${charge.toFixed(2)} ${user.currency}`);
+    }
+
+    saveUsers();
+    showDashboard();
+  }
+
+  window.onload = function() {
+    const user = sessionStorage.getItem("loggedInUser");
+    if (user && users[user]) showDashboard();
+    else showLogin();
   };
-
-  sender.transactions.push({ ...tx, type: "Sent" });
-  recipient.transactions.push({ ...tx, type: "Received" });
-
-  document.getElementById("balance").textContent = sender.balance.toLocaleString();
-  status.textContent = `✅ Sent ${amount.toLocaleString()} KES to ${recipientName.toUpperCase()} (Fee: ${fee.toFixed(2)} KES)`;
-
-  displayUserTransactions(senderName);
-  if (senderName === "admin") showAdminPanel();
-}
-
-function displayUserTransactions(username) {
-  const txDiv = document.getElementById("userTransactions");
-  const txs = users[username].transactions;
-  if (txs.length === 0) return txDiv.innerHTML = "<p>No transactions yet.</p>";
-  let html = "<table><tr><th>Type</th><th>To/From</th><th>Amount</th><th>Fee</th><th>Date</th></tr>";
-  txs.forEach(t => {
-    html += `<tr><td>${t.type}</td><td>${t.type === "Sent" ? t.to : t.from}</td><td>${t.amount}</td><td>${t.fee}</td><td>${t.timestamp}</td></tr>`;
-  });
-  html += "</table>";
-  txDiv.innerHTML = html;
-}
-
-function showAdminPanel() {
-  document.getElementById("adminPanel").style.display = "block";
-  document.getElementById("totalUsers").textContent = Object.keys(users).length;
-  let total = 0;
-  for (let u in users) total += users[u].balance;
-  document.getElementById("totalFunds").textContent = total.toLocaleString();
-
-  let html = "<table><tr><th>From</th><th>To</th><th>Amount</th><th>Fee</th><th>Date</th></tr>";
-  for (let u in users) {
-    users[u].transactions.forEach(t => {
-      if (t.type === "Sent") {
-        html += `<tr><td>${t.from}</td><td>${t.to}</td><td>${t.amount}</td><td>${t.fee}</td><td>${t.timestamp}</td></tr>`;
-      }
-    });
-  }
-  html += "</table>";
-  document.getElementById("adminTransactions").innerHTML = html;
-}
-
-function downloadCSV() {
-  let rows = [["From", "To", "Amount", "Fee", "Timestamp"]];
-  for (let u in users) {
-    users[u].transactions.forEach(t => {
-      if (t.type === "Sent") {
-        rows.push([t.from, t.to, t.amount, t.fee, t.timestamp]);
-      }
-    });
-  }
-
-  let csv = rows.map(r => r.join(",")).join("\n");
-  let blob = new Blob([csv], { type: "text/csv" });
-  let link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = "transaction_log.csv";
-  link.click();
-}
-
-window.onload = showDashboard;
 </script>
-
 </body>
 </html>
