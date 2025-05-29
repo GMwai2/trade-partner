@@ -1,193 +1,477 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Wallet Platform</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    #dashboard, #adminPanel { display: none; margin-top: 20px; }
-    .hidden { display: none; }
-    table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 5px; }
-    input { margin: 4px; padding: 5px; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Wallet Platform with Admin & KYC</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; background: #f0f2f5; }
+  h2 { margin-top: 0; }
+  .hidden { display: none; }
+  input, select, button { margin: 5px 0; padding: 8px; width: 100%; max-width: 300px; }
+  label { display: block; margin-top: 10px; font-weight: bold; }
+  #dashboard, #adminDashboard, #transactionHistory { margin-top: 20px; background: white; padding: 20px; border-radius: 5px; }
+  #messages { color: green; margin-bottom: 10px; }
+  #errors { color: red; margin-bottom: 10px; }
+  canvas { max-width: 600px; margin: 10px 0; }
+  table { border-collapse: collapse; width: 100%; max-width: 800px; margin-top: 10px; }
+  th, td { border: 1px solid #ddd; padding: 8px; }
+  th { background: #333; color: white; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-<h2>Wallet Platform</h2>
+<h1>Wallet Platform</h1>
+
+<div id="messages"></div>
+<div id="errors"></div>
 
 <div id="authSection">
-  <h3>Register</h3>
-  <input placeholder="Surname" id="surname">
-  <input placeholder="Middle Name" id="middlename">
-  <input placeholder="First Name" id="firstname"><br>
-  <input placeholder="ID/Passport" id="id">
-  <input placeholder="Phone" id="phone">
-  <input placeholder="Email" id="email"><br>
-  <input placeholder="Password" id="password" type="password">
-  <input placeholder="PIN" id="pin" type="password"><br>
-  <button onclick="register()">Register</button>
-
-  <h3>Login</h3>
-  <input placeholder="ID/Passport" id="loginID">
-  <input placeholder="Password" id="loginPass" type="password">
+  <h2>Login</h2>
+  <label for="loginUsername">Username or Email</label>
+  <input type="text" id="loginUsername" placeholder="Username or Email" />
+  <label for="loginPassword">Password</label>
+  <input type="password" id="loginPassword" placeholder="Password" />
   <button onclick="login()">Login</button>
+  <hr />
+  <h2>Register New User</h2>
+  <form id="registerForm" onsubmit="return registerUser(event)">
+    <label for="regSurname">Surname *</label>
+    <input type="text" id="regSurname" required />
+    <label for="regMiddleName">Middle Name</label>
+    <input type="text" id="regMiddleName" />
+    <label for="regFirstName">First Name *</label>
+    <input type="text" id="regFirstName" required />
+    <label for="regID">ID / Passport Number *</label>
+    <input type="text" id="regID" required />
+    <label for="regPhone">Phone Number *</label>
+    <input type="tel" id="regPhone" required />
+    <label for="regEmail">Email Address *</label>
+    <input type="email" id="regEmail" required />
+    <label for="regPassword">Password *</label>
+    <input type="password" id="regPassword" required />
+    <label for="regPIN">4-Digit PIN *</label>
+    <input type="password" id="regPIN" maxlength="4" pattern="\d{4}" required />
+    <button type="submit">Register</button>
+  </form>
 </div>
 
-<div id="dashboard">
-  <h3>Welcome, <span id="username"></span></h3>
-  <p>Transaction Wallet: KES <span id="transactionWallet"></span></p>
-  <p>Trading Wallet: KES <span id="tradingWallet"></span></p>
+<div id="dashboard" class="hidden">
+  <h2>User Dashboard</h2>
+  <p>Welcome, <span id="userFullName"></span>!</p>
+  <p><strong>Transaction Wallet Balance:</strong> KES <span id="transactionWalletBalance">0</span></p>
+  <p><strong>Trading Wallet Balance:</strong> KES <span id="tradingWalletBalance">0</span></p>
+  <h3>Transfer Money</h3>
+  <label for="transferRecipient">Recipient Username</label>
+  <input type="text" id="transferRecipient" placeholder="Recipient username" />
+  <label for="transferAmount">Amount (KES)</label>
+  <input type="number" id="transferAmount" min="1" />
+  <label for="transferWallet">From Wallet</label>
+  <select id="transferWallet">
+    <option value="transaction">Transaction Wallet</option>
+    <option value="trading">Trading Wallet</option>
+  </select>
+  <button onclick="transferMoney()">Send</button>
+  <button onclick="logout()">Logout</button>
+</div>
 
-  <div id="adminPanel">
-    <h3>Admin Panel</h3>
-    <button onclick="transferAdminFunds()">Move Funds to Trading Wallet</button>
-    <button onclick="exportKYC()">Export KYC to Excel</button>
-
-    <canvas id="transactionChart" width="300"></canvas>
-    <canvas id="tradingChart" width="300"></canvas>
-  </div>
-
-  <h4>Transaction History</h4>
-  <table id="historyLog"><thead><tr><th>From</th><th>To</th><th>Amount</th><th>Type</th><th>Date</th></tr></thead><tbody></tbody></table>
+<div id="adminDashboard" class="hidden">
+  <h2>Admin Dashboard</h2>
+  <p>Welcome Admin!</p>
+  <h3>Wallet Balances</h3>
+  <p><strong>Transaction Wallet Total:</strong> KES <span id="adminTransactionWalletTotal">0</span></p>
+  <p><strong>Trading Wallet Total:</strong> KES <span id="adminTradingWalletTotal">0</span></p>
+  <h3>Move Money Between Wallets</h3>
+  <label for="adminMoveFrom">From Wallet</label>
+  <select id="adminMoveFrom">
+    <option value="transaction">Transaction Wallet</option>
+    <option value="trading">Trading Wallet</option>
+  </select>
+  <label for="adminMoveTo">To Wallet</label>
+  <select id="adminMoveTo">
+    <option value="trading">Trading Wallet</option>
+    <option value="transaction">Transaction Wallet</option>
+  </select>
+  <label for="adminMoveAmount">Amount (KES)</label>
+  <input type="number" id="adminMoveAmount" min="1" />
+  <button onclick="adminMoveMoney()">Move Money</button>
+  
+  <h3>Wallet Balances Graphs</h3>
+  <canvas id="transactionWalletChart"></canvas>
+  <canvas id="tradingWalletChart"></canvas>
+  
+  <h3>Transaction History Log</h3>
+  <div id="transactionHistory"></div>
+  
+  <h3>Export KYC Data</h3>
+  <button onclick="exportKYCtoCSV()">Export KYC as CSV</button>
 
   <button onclick="logout()">Logout</button>
 </div>
 
 <script>
-let users = JSON.parse(localStorage.getItem("users")) || [];
-let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+// Data storage in localStorage keys
+const USERS_KEY = 'walletUsers';
+const TRANSACTIONS_KEY = 'walletTransactions';
+const LOGGED_IN_KEY = 'walletLoggedInUser';
 
-function register() {
-  let user = {
-    surname: document.getElementById("surname").value,
-    middlename: document.getElementById("middlename").value,
-    firstname: document.getElementById("firstname").value,
-    id: document.getElementById("id").value,
-    phone: document.getElementById("phone").value,
-    email: document.getElementById("email").value,
-    password: document.getElementById("password").value,
-    pin: document.getElementById("pin").value,
-    transactionWallet: 0,
-    tradingWallet: 0,
-    username: document.getElementById("id").value
-  };
-  if (users.some(u => u.id === user.id)) return alert("User exists");
-  users.push(user);
-  localStorage.setItem("users", JSON.stringify(users));
-  alert("Registered successfully!");
+// Hardcoded admin user
+const hardcodedAdmin = {
+  username: 'admin',
+  password: 'Admin@123',
+  email: 'admin@example.com',
+  phone: '0000000000',
+  surname: 'Admin',
+  middleName: '',
+  firstName: 'User',
+  idNumber: 'ADMIN001',
+  pin: '0000',
+  wallets: {
+    transaction: 1000000, // 1,000,000 KES starting balance
+    trading: 500000 // 500,000 KES starting balance
+  },
+  isAdmin: true
+};
+
+// Load users or create default with admin
+function loadUsers() {
+  let users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+  // Ensure admin is present
+  if (!users.find(u => u.username === hardcodedAdmin.username)) {
+    users.push(hardcodedAdmin);
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  }
+  return users;
 }
 
+function saveUsers(users) {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+
+function loadTransactions() {
+  return JSON.parse(localStorage.getItem(TRANSACTIONS_KEY) || '[]');
+}
+
+function saveTransactions(transactions) {
+  localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(transactions));
+}
+
+function setLoggedInUser(username) {
+  localStorage.setItem(LOGGED_IN_KEY, username);
+}
+
+function getLoggedInUser() {
+  return localStorage.getItem(LOGGED_IN_KEY);
+}
+
+function clearLoggedInUser() {
+  localStorage.removeItem(LOGGED_IN_KEY);
+}
+
+// Helper to find user by username or email
+function findUserByUsernameOrEmail(identifier) {
+  const users = loadUsers();
+  return users.find(u => u.username === identifier || u.email === identifier);
+}
+
+// Generate username from ID/passport (simple, lowercase)
+function generateUsername(idNumber) {
+  return idNumber.toLowerCase();
+}
+
+// Validate email format (simple regex)
+function validateEmail(email) {
+  const re = /\S+@\S+\.\S+/;
+  return re.test(email);
+}
+
+// --- LOGIN ---
 function login() {
-  let id = document.getElementById("loginID").value;
-  let pass = document.getElementById("loginPass").value;
-  let user = users.find(u => u.id === id && u.password === pass);
-  if (!user) return alert("Invalid credentials");
+  clearMessages();
+  const identifier = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value;
 
-  sessionStorage.setItem("currentUser", JSON.stringify(user));
-  document.getElementById("authSection").style.display = "none";
-  document.getElementById("dashboard").style.display = "block";
-
-  document.getElementById("username").innerText = user.firstname;
-  document.getElementById("transactionWallet").innerText = user.transactionWallet;
-  document.getElementById("tradingWallet").innerText = user.tradingWallet;
-
-  if (user.id === "admin") {
-    document.getElementById("adminPanel").style.display = "block";
-    drawGraphs();
+  if (!identifier || !password) {
+    showError('Please enter username/email and password.');
+    return;
   }
 
-  loadHistory(user.id);
+  const users = loadUsers();
+  const user = findUserByUsernameOrEmail(identifier);
+
+  if (!user) {
+    showError('User not found.');
+    return;
+  }
+
+  if (user.password !== password) {
+    showError('Incorrect password.');
+    return;
+  }
+
+  setLoggedInUser(user.username);
+  showMessage(`Logged in as ${user.username}`);
+  showDashboard();
 }
 
+// --- REGISTER ---
+function registerUser(e) {
+  e.preventDefault();
+  clearMessages();
+
+  const surname = document.getElementById('regSurname').value.trim();
+  const middleName = document.getElementById('regMiddleName').value.trim();
+  const firstName = document.getElementById('regFirstName').value.trim();
+  const idNumber = document.getElementById('regID').value.trim();
+  const phone = document.getElementById('regPhone').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+  const pin = document.getElementById('regPIN').value;
+
+  if (!surname || !firstName || !idNumber || !phone || !email || !password || !pin) {
+    showError('Please fill in all required fields.');
+    return false;
+  }
+  if (!validateEmail(email)) {
+    showError('Invalid email format.');
+    return false;
+  }
+  if (!/^\d{4}$/.test(pin)) {
+    showError('PIN must be exactly 4 digits.');
+    return false;
+  }
+
+  let users = loadUsers();
+
+  // Check if email or username (based on idNumber) already used
+  const username = generateUsername(idNumber);
+  if (users.find(u => u.username === username)) {
+    showError('User with this ID/Passport already registered.');
+    return false;
+  }
+  if (users.find(u => u.email === email)) {
+    showError('Email already registered.');
+    return false;
+  }
+
+  const newUser = {
+    username,
+    password,
+    email,
+    phone,
+    surname,
+    middleName,
+    firstName,
+    idNumber,
+    pin,
+    wallets: { transaction: 0, trading: 0 },
+    isAdmin: false
+  };
+
+  users.push(newUser);
+  saveUsers(users);
+  showMessage('Registration successful. You can now log in.');
+  document.getElementById('registerForm').reset();
+  return false;
+}
+
+// --- DASHBOARD ---
+function showDashboard() {
+  const loggedInUsername = getLoggedInUser();
+  if (!loggedInUsername) return showLogin();
+
+  const users = loadUsers();
+  const user = users.find(u => u.username === loggedInUsername);
+  if (!user) return showLogin();
+
+  // Hide login/register
+  document.getElementById('authSection').classList.add('hidden');
+
+  // Show user dashboard or admin dashboard
+  if (user.isAdmin) {
+    showAdminDashboard(user);
+  } else {
+    showUserDashboard(user);
+  }
+}
+
+function showLogin() {
+  document.getElementById('authSection').classList.remove('hidden');
+  document.getElementById('dashboard').classList.add('hidden');
+  document.getElementById('adminDashboard').classList.add('hidden');
+  clearMessages();
+}
+
+function showUserDashboard(user) {
+  document.getElementById('dashboard').classList.remove('hidden');
+  document.getElementById('adminDashboard').classList.add('hidden');
+
+  document.getElementById('userFullName').textContent = `${user.surname} ${user.middleName} ${user.firstName}`;
+  document.getElementById('transactionWalletBalance').textContent = user.wallets.transaction.toFixed(2);
+  document.getElementById('tradingWalletBalance').textContent = user.wallets.trading.toFixed(2);
+}
+
+function showAdminDashboard(user) {
+  document.getElementById('dashboard').classList.add('hidden');
+  document.getElementById('adminDashboard').classList.remove('hidden');
+
+  updateAdminWalletTotals();
+  renderAdminCharts();
+  renderTransactionHistory();
+}
+
+// --- LOGOUT ---
 function logout() {
-  sessionStorage.removeItem("currentUser");
-  document.getElementById("dashboard").style.display = "none";
-  document.getElementById("authSection").style.display = "block";
+  clearLoggedInUser();
+  showLogin();
+  clearMessages();
 }
 
-function transferAdminFunds() {
-  let user = JSON.parse(sessionStorage.getItem("currentUser"));
-  let amount = prompt("Amount to move to trading wallet:");
-  amount = parseFloat(amount);
-  if (user.transactionWallet < amount) return alert("Insufficient funds");
-  user.transactionWallet -= amount;
-  user.tradingWallet += amount;
+// --- TRANSFER MONEY ---
+function transferMoney() {
+  clearMessages();
+  const recipientUsername = document.getElementById('transferRecipient').value.trim();
+  const amount = parseFloat(document.getElementById('transferAmount').value);
+  const fromWallet = document.getElementById('transferWallet').value;
 
-  logTransaction(user.id, "admin_trading", amount, "admin_move");
+  if (!recipientUsername || isNaN(amount) || amount <= 0) {
+    showError('Please enter valid recipient and amount.');
+    return;
+  }
 
-  updateUser(user);
-  alert("Moved successfully!");
-  location.reload();
-}
+  const users = loadUsers();
+  const sender = users.find(u => u.username === getLoggedInUser());
+  if (!sender) return showError('Sender not found.');
 
-function logTransaction(from, to, amount, type) {
+  const recipient = users.find(u => u.username === recipientUsername);
+  if (!recipient) return showError('Recipient not found.');
+
+  if (sender.username === recipient.username) return showError('Cannot transfer to yourself.');
+
+  if (sender.wallets[fromWallet] < amount) return showError('Insufficient funds.');
+
+  // Debit sender wallet
+  sender.wallets[fromWallet] -= amount;
+
+  // Credit recipient transaction wallet only for simplicity
+  recipient.wallets.transaction += amount;
+
+  // Log transaction
+  const transactions = loadTransactions();
+  const now = new Date();
   transactions.push({
-    from, to, amount, type,
-    date: new Date().toLocaleString()
+    id: 'tx' + Date.now(),
+    from: sender.username,
+    to: recipient.username,
+    amount,
+    wallet: fromWallet,
+    date: now.toISOString()
   });
-  localStorage.setItem("transactions", JSON.stringify(transactions));
+  saveTransactions(transactions);
+
+  saveUsers(users);
+  showMessage(`Transferred KES ${amount.toFixed(2)} from your ${fromWallet} wallet to ${recipient.username}.`);
+
+  showDashboard();
+
+  // Placeholder for SMS/email notification
+  sendNotification(recipient.email, `You received KES ${amount.toFixed(2)} from ${sender.username}.`);
+  sendNotification(sender.email, `You sent KES ${amount.toFixed(2)} to ${recipient.username}.`);
 }
 
-function loadHistory(userID) {
-  let tbody = document.querySelector("#historyLog tbody");
-  tbody.innerHTML = "";
-  transactions.filter(t => t.from === userID || t.to === userID)
-    .forEach(t => {
-      tbody.innerHTML += `<tr><td>${t.from}</td><td>${t.to}</td><td>${t.amount}</td><td>${t.type}</td><td>${t.date}</td></tr>`;
-    });
-}
+// --- ADMIN MOVE MONEY BETWEEN WALLETS ---
+function adminMoveMoney() {
+  clearMessages();
+  const fromWallet = document.getElementById('adminMoveFrom').value;
+  const toWallet = document.getElementById('adminMoveTo').value;
+  const amount = parseFloat(document.getElementById('adminMoveAmount').value);
 
-function updateUser(user) {
-  let i = users.findIndex(u => u.id === user.id);
-  users[i] = user;
-  localStorage.setItem("users", JSON.stringify(users));
-  sessionStorage.setItem("currentUser", JSON.stringify(user));
-}
+  if (fromWallet === toWallet) {
+    showError('From and To wallets cannot be the same.');
+    return;
+  }
+  if (isNaN(amount) || amount <= 0) {
+    showError('Enter valid amount.');
+    return;
+  }
 
-function drawGraphs() {
-  let ctx1 = document.getElementById("transactionChart").getContext("2d");
-  let ctx2 = document.getElementById("tradingChart").getContext("2d");
-  let admin = users.find(u => u.id === "admin");
+  let users = loadUsers();
+  const admin = users.find(u => u.username === getLoggedInUser());
+  if (!admin || !admin.isAdmin) return showError('Admin access required.');
 
-  new Chart(ctx1, {
-    type: 'bar',
-    data: {
-      labels: ["Transaction Wallet"],
-      datasets: [{ label: 'KES', data: [admin.transactionWallet], backgroundColor: 'blue' }]
-    }
+  if (admin.wallets[fromWallet] < amount) return showError('Insufficient funds in source wallet.');
+
+  admin.wallets[fromWallet] -= amount;
+  admin.wallets[toWallet] += amount;
+
+  // Log as internal admin transaction
+  const transactions = loadTransactions();
+  const now = new Date();
+  transactions.push({
+    id: 'adminTx' + Date.now(),
+    from: `Admin ${fromWallet} wallet`,
+    to: `Admin ${toWallet} wallet`,
+    amount,
+    wallet: `${fromWallet}->${toWallet}`,
+    date: now.toISOString()
   });
+  saveTransactions(transactions);
+  saveUsers(users);
 
-  new Chart(ctx2, {
-    type: 'bar',
-    data: {
-      labels: ["Trading Wallet"],
-      datasets: [{ label: 'KES', data: [admin.tradingWallet], backgroundColor: 'green' }]
-    }
+  showMessage(`Moved KES ${amount.toFixed(2)} from ${fromWallet} wallet to ${toWallet} wallet.`);
+  updateAdminWalletTotals();
+  renderAdminCharts();
+  renderTransactionHistory();
+}
+
+// --- TRANSACTION HISTORY ---
+function renderTransactionHistory() {
+  const transactions = loadTransactions();
+  if (!transactions.length) {
+    document.getElementById('transactionHistory').innerHTML = '<p>No transactions yet.</p>';
+    return;
+  }
+
+  let html = `<table>
+    <tr>
+      <th>ID</th><th>From</th><th>To</th><th>Amount (KES)</th><th>Wallet</th><th>Date</th>
+    </tr>`;
+  transactions.slice().reverse().forEach(tx => {
+    html += `<tr>
+      <td>${tx.id}</td>
+      <td>${tx.from}</td>
+      <td>${tx.to}</td>
+      <td>${tx.amount.toFixed(2)}</td>
+      <td>${tx.wallet}</td>
+      <td>${new Date(tx.date).toLocaleString()}</td>
+    </tr>`;
   });
+  html += '</table>';
+  document.getElementById('transactionHistory').innerHTML = html;
 }
 
-function exportKYC() {
-  let data = users.map(u => ({
-    Surname: u.surname,
-    MiddleName: u.middlename,
-    FirstName: u.firstname,
-    ID: u.id,
-    Phone: u.phone,
-    Email: u.email
-  }));
-  let ws = XLSX.utils.json_to_sheet(data);
-  let wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "KYC Data");
-  XLSX.writeFile(wb, "KYC_Report.xlsx");
+// --- ADMIN WALLET TOTALS ---
+function updateAdminWalletTotals() {
+  const users = loadUsers();
+  // For admin only their wallets
+  const admin = users.find(u => u.username === getLoggedInUser());
+  if (!admin) return;
+
+  document.getElementById('adminTransactionWalletTotal').textContent = admin.wallets.transaction.toFixed(2);
+  document.getElementById('adminTradingWalletTotal').textContent = admin.wallets.trading.toFixed(2);
 }
 
-// Placeholder notification
-function sendNotification(phone, email, message) {
-  console.log(`SMS to ${phone}: ${message}`);
-  console.log(`Email to ${email}: ${message}`);
-}
-</script>
+// --- GRAPHS ---
+let transactionWalletChartInstance = null;
+let tradingWalletChartInstance = null;
 
-</body>
-</html>
+function renderAdminCharts() {
+  const users = loadUsers();
+  const admin = users.find(u => u.username === getLoggedInUser());
+  if (!admin) return;
+
+  // For demonstration, plot admin's own wallet balances history
+  // We'll simulate history by showing current balances as bar chart
+
+  const
