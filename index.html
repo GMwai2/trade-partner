@@ -2,47 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Wallet Platform Login</title>
+  <title>Alrafy Wallet Platform</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; background: #f0f0f0; }
-    .container { max-width: 400px; margin: 100px auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    h2 { text-align: center; }
-    input, button { width: 100%; padding: 10px; margin: 10px 0; }
-    #dashboard { display: none; padding: 30px; background: white; max-width: 600px; margin: 50px auto; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    .logout { float: right; background: red; color: white; border: none; padding: 5px 10px; }
-    .error { color: red; text-align: center; }
-    #transferSection, #adminSection { margin-top: 20px; border-top: 1px solid #ddd; padding-top: 20px; }
+    body { font-family: Arial, sans-serif; margin: 0; background: #f0f2f5; }
+    .container, #dashboard, #adminSection {
+      max-width: 600px; margin: 40px auto; padding: 20px;
+      background: #fff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input, button, select {
+      width: 100%; padding: 10px; margin: 10px 0;
+      border: 1px solid #ccc; border-radius: 4px;
+    }
+    .logout { float: right; background: red; color: white; border: none; padding: 8px 12px; border-radius: 4px; }
+    h2, h3 { text-align: center; }
+    .error, .success { text-align: center; color: red; }
+    .success { color: green; }
+    @media (max-width: 600px) {
+      body, .container, #dashboard { padding: 10px; margin: 20px auto; }
+    }
   </style>
 </head>
 <body>
 
+<!-- LOGIN -->
 <div class="container" id="loginForm">
-  <h2>Login to Wallet</h2>
-  <input type="text" id="username" placeholder="Username" autocomplete="off">
-  <input type="password" id="password" placeholder="Password" autocomplete="off">
+  <h2>Login to Alrafy Wallet</h2>
+  <input type="text" id="username" placeholder="Username">
+  <input type="password" id="password" placeholder="Password">
   <button onclick="login()">Log In</button>
   <p id="loginError" class="error"></p>
 </div>
 
-<div id="dashboard">
+<!-- DASHBOARD -->
+<div id="dashboard" style="display:none;">
   <button class="logout" onclick="logout()">Logout</button>
   <h2 id="welcome"></h2>
   <p><strong>Email:</strong> <span id="userEmail"></span></p>
   <p><strong>Wallet Number:</strong> <span id="walletNumber"></span></p>
-  <p><strong>Balance:</strong> <span id="balance"></span> KES</p>
+  <p><strong>Balance:</strong> KES <span id="balance"></span></p>
 
-  <div id="transferSection">
-    <h3>Transfer Funds</h3>
-    <input type="text" id="recipient" placeholder="Recipient Username">
-    <input type="number" id="amount" placeholder="Amount to Transfer">
-    <button onclick="transferMoney()">Send</button>
-    <p id="transferStatus" class="error"></p>
-  </div>
+  <h3>Transfer Money</h3>
+  <input type="text" id="recipient" placeholder="Recipient Username (e.g., kilush)">
+  <input type="number" id="amount" placeholder="Amount to Send">
+  <button onclick="transferMoney()">Send</button>
+  <p id="transferStatus" class="success"></p>
 
-  <div id="adminSection" style="display: none;">
+  <!-- ADMIN VIEW -->
+  <div id="adminSection" style="display:none;">
     <h3>Admin Stats</h3>
-    <p>Total Registered Users: <span id="userCount"></span></p>
-    <p>Total Funds in System: <span id="totalFunds"></span> KES</p>
+    <p><strong>Registered Users:</strong> <span id="userCount"></span></p>
+    <p><strong>Total Wallet Funds:</strong> KES <span id="totalFunds"></span></p>
+
+    <!-- 🔄 FUTURE EXPORT FUNCTIONALITY -->
+    <!-- <button onclick="exportToExcel()">Download Excel Report</button> -->
   </div>
 </div>
 
@@ -84,7 +97,7 @@
     const user = users[uname];
     document.getElementById("loginForm").style.display = "none";
     document.getElementById("dashboard").style.display = "block";
-    document.getElementById("welcome").textContent = `Welcome, ${uname.toUpperCase()}!`;
+    document.getElementById("welcome").textContent = `Welcome, ${uname.toUpperCase()}`;
     document.getElementById("userEmail").textContent = user.email;
     document.getElementById("walletNumber").textContent = user.wallet;
     document.getElementById("balance").textContent = user.balance.toLocaleString();
@@ -92,17 +105,6 @@
     if (uname === "admin") {
       showAdminStats();
     }
-  }
-
-  function showAdminStats() {
-    document.getElementById("adminSection").style.display = "block";
-    const userCount = Object.keys(users).length;
-    let totalFunds = 0;
-    for (let u in users) {
-      totalFunds += users[u].balance;
-    }
-    document.getElementById("userCount").textContent = userCount;
-    document.getElementById("totalFunds").textContent = totalFunds.toLocaleString();
   }
 
   function transferMoney() {
@@ -123,7 +125,7 @@
     }
 
     if (recipientUsername === senderUsername) {
-      statusEl.textContent = "You cannot send money to yourself.";
+      statusEl.textContent = "Cannot transfer to yourself.";
       return;
     }
 
@@ -132,20 +134,28 @@
       return;
     }
 
-    const recipient = users[recipientUsername];
     sender.balance -= amount;
-    recipient.balance += amount;
+    users[recipientUsername].balance += amount;
 
     document.getElementById("balance").textContent = sender.balance.toLocaleString();
-    statusEl.style.color = "green";
-    statusEl.textContent = `✅ Successfully sent ${amount.toLocaleString()} KES to ${recipientUsername.toUpperCase()}`;
+    statusEl.textContent = `✅ Sent ${amount.toLocaleString()} KES to ${recipientUsername.toUpperCase()}`;
   }
 
-  window.onload = function () {
-    const uname = localStorage.getItem("loggedInUser");
-    if (uname && uname in users) {
-      showDashboard();
+  function showAdminStats() {
+    const userCount = Object.keys(users).length;
+    let totalFunds = 0;
+    for (let u in users) {
+      totalFunds += users[u].balance;
     }
+    document.getElementById("adminSection").style.display = "block";
+    document.getElementById("userCount").textContent = userCount;
+    document.getElementById("totalFunds").textContent = totalFunds.toLocaleString();
+  }
+
+  // On Load
+  window.onload = () => {
+    const uname = localStorage.getItem("loggedInUser");
+    if (uname && uname in users) showDashboard();
   };
 </script>
 
