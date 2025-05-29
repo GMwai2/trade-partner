@@ -117,7 +117,7 @@ const TRANSACTIONS_KEY = 'walletTransactions';
 const LOGGED_IN_KEY = 'walletLoggedInUser';
 
 // Hardcoded admin user
-const hardcodedAdmin = {
+const admin = {
   username: 'admin',
   password: 'Admin@123',
   email: 'admin@example.com',
@@ -127,11 +127,10 @@ const hardcodedAdmin = {
   firstName: 'User',
   idNumber: 'ADMIN001',
   pin: '0000',
-  wallets: {
-    transaction: 1000000, // 1,000,000 KES starting balance
-    trading: 500000 // 500,000 KES starting balance
-  },
+  wallets: { transaction: 1000000, trading: 500000 },
   isAdmin: true
+};
+localStorage.setItem('walletUsers', JSON.stringify([admin]));
 };
 
 // Load users or create default with admin
