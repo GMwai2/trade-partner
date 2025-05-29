@@ -1,281 +1,489 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Wallet Platform</title>
-  <style>
-    body { font-family: Arial; background: #f4f4f4; padding: 20px; }
-    .hidden { display: none; }
-    .box, .dashboard { background: white; padding: 20px; border-radius: 8px; margin: 10px auto; max-width: 600px; }
-    input, select, button { width: 100%; padding: 10px; margin: 10px 0; }
-    button.logout { background: #e74c3c; color: white; }
-    .inline { display: inline-block; width: 48%; }
-    canvas { max-width: 100%; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Wallet Transfer Platform</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
+  header { background: #222; color: #fff; padding: 1rem; text-align: center; }
+  main { max-width: 800px; margin: 2rem auto; background: #fff; padding: 1rem 2rem; border-radius: 5px; box-shadow: 0 0 10px #ccc; }
+  input, button, select { padding: 0.5rem; margin: 0.5rem 0; width: 100%; box-sizing: border-box; }
+  button { cursor: pointer; background: #007bff; color: white; border: none; border-radius: 3px; }
+  button:hover { background: #0056b3; }
+  label { font-weight: bold; }
+  .hidden { display: none; }
+  .error { color: red; }
+  nav { margin-bottom: 1rem; text-align: right; }
+  nav button { width: auto; margin-left: 1rem; }
+  table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+  th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: center; }
+  th { background: #007bff; color: white; }
+  #admin-section { margin-top: 2rem; }
+  #tx-chart { height: 150px; }
+</style>
 </head>
 <body>
 
-  <!-- START PAGE -->
-  <div id="startPage" class="box">
-    <h2>Welcome to Wallet Platform</h2>
-    <button onclick="showLogin()">Login</button>
-    <button onclick="showRegister()">Register</button>
-  </div>
+<header>
+  <h1>Wallet Transfer Platform</h1>
+</header>
 
-  <!-- LOGIN PAGE -->
-  <div id="loginPage" class="box hidden">
+<main>
+  <!-- LOGIN FORM -->
+  <section id="login-section">
     <h2>Login</h2>
-    <input id="loginUsername" placeholder="Username">
-    <input id="loginPassword" type="password" placeholder="Password">
-    <button onclick="login()">Log In</button>
-    <button onclick="showStart()">Back</button>
-  </div>
+    <form id="login-form">
+      <label for="login-username">Username</label>
+      <input id="login-username" type="text" required />
+      <label for="login-password">Password</label>
+      <input id="login-password" type="password" required />
+      <button type="submit">Login</button>
+    </form>
+    <p>Don't have an account? <a href="#" id="show-register">Register here</a></p>
+    <p id="login-error" class="error"></p>
+  </section>
 
-  <!-- REGISTER PAGE -->
-  <div id="registerPage" class="box hidden">
+  <!-- REGISTER FORM -->
+  <section id="register-section" class="hidden">
     <h2>Register</h2>
-    <input id="regSurname" placeholder="Surname">
-    <input id="regMiddle" placeholder="Middle Name (optional)">
-    <input id="regFirst" placeholder="First Name">
-    <input id="regID" placeholder="ID/Passport Number">
-    <input id="regPhone" placeholder="Phone Number">
-    <input id="regEmail" placeholder="Email Address">
-    <input id="regPassword" type="password" placeholder="Password">
-    <input id="regPin" type="password" placeholder="Transaction PIN">
+    <form id="register-form">
+      <label for="reg-fullname">Full Name</label>
+      <input id="reg-fullname" type="text" required placeholder="Surname MiddleName(optional) FirstName" />
+      <label for="reg-email">Email</label>
+      <input id="reg-email" type="email" required />
+      <label for="reg-phone">Phone Number</label>
+      <input id="reg-phone" type="tel" required placeholder="+2547XXXXXXXX" />
+      <label for="reg-password">Password</label>
+      <input id="reg-password" type="password" required minlength="6" />
+      <label for="reg-pin">4-Digit PIN</label>
+      <input id="reg-pin" type="password" required pattern="\d{4}" maxlength="4" placeholder="****" />
+      <button type="submit">Register</button>
+    </form>
+    <p>Already have an account? <a href="#" id="show-login">Login here</a></p>
+    <p id="register-error" class="error"></p>
+  </section>
 
-    <label>Select Country</label>
-    <select id="regCountry">
-      <option value="">--Country--</option>
-      <option value="Kenya">Kenya (KES)</option>
-      <option value="USA">USA (USD)</option>
-      <option value="Japan">Japan (JPY)</option>
-    </select>
+  <!-- DASHBOARD -->
+  <section id="dashboard-section" class="hidden">
+    <nav>
+      <span id="welcome-msg"></span>
+      <button id="logout-btn">Logout</button>
+    </nav>
 
-    <label>Wallet Currency</label>
-    <select id="regCurrency">
-      <option value="">--Currency--</option>
-      <option value="KES">KES</option>
-      <option value="USD">USD</option>
-      <option value="JPY">JPY</option>
-    </select>
-
-    <button onclick="register()">Register</button>
-    <button onclick="showStart()">Back</button>
-  </div>
-
-  <!-- USER DASHBOARD -->
-  <div id="userDashboard" class="dashboard hidden">
-    <h2>User Dashboard</h2>
-    <div id="userInfo"></div>
+    <h2>Wallet Dashboard</h2>
+    <p><strong>Wallet Number:</strong> <span id="wallet-number"></span></p>
+    <p><strong>Balance:</strong> KES <span id="wallet-balance"></span></p>
 
     <h3>Send Money</h3>
-    <input id="recipientWallet" placeholder="Recipient Wallet#">
-    <input id="amount" type="number" placeholder="Amount">
-    <input id="confirmPin" type="password" placeholder="PIN">
-    <button onclick="transfer()">Send</button>
-    <p id="transferMsg"></p>
+    <form id="transfer-form">
+      <label for="recipient-wallet">Recipient Wallet Number</label>
+      <input id="recipient-wallet" type="text" required pattern="WLT\d{4}" placeholder="WLT0001" />
+      <label for="transfer-amount">Amount (KES)</label>
+      <input id="transfer-amount" type="number" required min="1" />
+      <label for="transfer-pin">Your 4-Digit PIN</label>
+      <input id="transfer-pin" type="password" required pattern="\d{4}" maxlength="4" />
+      <button type="submit">Send</button>
+    </form>
+    <p id="transfer-message" class="error"></p>
 
-    <h3>Transaction Log</h3>
-    <pre id="transactionLog" style="background:#eef; padding:10px; max-height:200px; overflow:auto;"></pre>
+    <h3>Transaction History</h3>
+    <table id="tx-history-table">
+      <thead>
+        <tr><th>Date</th><th>From</th><th>To</th><th>Amount (KES)</th><th>Charge (KES)</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
 
-    <button class="logout" onclick="logout()">Logout</button>
-  </div>
+    <!-- Admin Section -->
+    <section id="admin-section" class="hidden">
+      <h3>Admin Controls</h3>
+      <p>Total Users: <span id="admin-user-count"></span></p>
+      <p>Total Transactions: <span id="admin-tx-count"></span></p>
+      <canvas id="tx-chart" width="700" height="150"></canvas>
+    </section>
+  </section>
+</main>
 
-  <!-- ADMIN DASHBOARD -->
-  <div id="adminDashboard" class="dashboard hidden">
-    <h2>Admin Dashboard</h2>
-    <h3>Trading Wallet Balances</h3>
-    <ul id="adminBal"></ul>
-
-    <div class="inline">
-      <h4>Transfers by Currency</h4>
-      <canvas id="transferChart"></canvas>
-    </div>
-    <div class="inline">
-      <h4>Fees Collected</h4>
-      <canvas id="feeChart"></canvas>
-    </div>
-
-    <h3>Create Sub-Admin</h3>
-    <input id="subName" placeholder="Name">
-    <input id="subPass" type="password" placeholder="Password">
-    <button onclick="createSubAdmin()">Create Sub-Admin</button>
-    <p id="subMsg"></p>
-
-    <h3>Admin Send Money</h3>
-    <input id="adminRecipient" placeholder="Recipient Wallet#">
-    <input id="adminAmount" type="number" placeholder="Amount">
-    <button onclick="adminSend()">Send from Trading Wallet</button>
-    <p id="adminSendMsg"></p>
-
-    <button class="logout" onclick="logout()">Logout</button>
-  </div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  // --- DATA STRUCTURES ---
-  const users = {
-    admin: {
-      password:"admin123", pin:"0000", role:"admin",
-      wallets:{KES:0,USD:0,JPY:0}, fees:{KES:0,USD:0,JPY:0}
-    },
-    kilush: {
-      password:"pass123", pin:"1111", role:"user", name:"Kilush",
-      wallets:{KES:5000}, logs:[]
-    },
-    schwadz: {
-      password:"pass123", pin:"2222", role:"user", name:"Schwadz",
-      wallets:{USD:6.4}, logs:[]
-    },
-    moses: {
-      password:"pass123", pin:"3333", role:"user", name:"Moses",
-      wallets:{JPY:1230}, logs:[]
-    }
+// ======= Data Storage and Initialization =======
+const LOCAL_STORAGE_KEY = 'wallet-platform-users';
+const LOCAL_STORAGE_TX_KEY = 'wallet-platform-transactions';
+
+// Predefined users (username -> user object)
+const defaultUsers = {
+  kilush: {
+    username: 'kilush',
+    fullname: 'Kilush Njoroge',
+    email: 'kilush@example.com',
+    phone: '+254700000001',
+    walletNumber: 'WLT0001',
+    password: 'pass123',
+    pin: '1234',
+    balance: 50000,
+    role: 'user'
+  },
+  schwadz: {
+    username: 'schwadz',
+    fullname: 'Schwadz Muthoni',
+    email: 'schwadz@example.com',
+    phone: '+254700000002',
+    walletNumber: 'WLT0002',
+    password: 'pass456',
+    pin: '5678',
+    balance: 75000,
+    role: 'user'
+  },
+  admin: {
+    username: 'admin',
+    fullname: 'Admin User',
+    email: 'admin@example.com',
+    phone: '+254700000000',
+    walletNumber: 'WLT9999',
+    password: 'adminpass',
+    pin: '9999',
+    balance: 1000000,
+    role: 'admin'
+  }
+};
+
+// Load or initialize users in localStorage
+function loadUsers() {
+  let users = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY));
+  if (!users) {
+    users = defaultUsers;
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(users));
+  }
+  return users;
+}
+
+function saveUsers(users) {
+  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(users));
+}
+
+// Load or initialize transactions
+function loadTransactions() {
+  let txs = JSON.parse(localStorage.getItem(LOCAL_STORAGE_TX_KEY));
+  if (!txs) {
+    txs = [];
+    localStorage.setItem(LOCAL_STORAGE_TX_KEY, JSON.stringify(txs));
+  }
+  return txs;
+}
+
+function saveTransactions(txs) {
+  localStorage.setItem(LOCAL_STORAGE_TX_KEY, JSON.stringify(txs));
+}
+
+// ======= UI Elements =======
+const loginSection = document.getElementById('login-section');
+const registerSection = document.getElementById('register-section');
+const dashboardSection = document.getElementById('dashboard-section');
+const adminSection = document.getElementById('admin-section');
+
+const loginForm = document.getElementById('login-form');
+const registerForm = document.getElementById('register-form');
+const transferForm = document.getElementById('transfer-form');
+
+const loginError = document.getElementById('login-error');
+const registerError = document.getElementById('register-error');
+const transferMessage = document.getElementById('transfer-message');
+
+const showRegisterLink = document.getElementById('show-register');
+const showLoginLink = document.getElementById('show-login');
+
+const welcomeMsg = document.getElementById('welcome-msg');
+const walletNumberSpan = document.getElementById('wallet-number');
+const walletBalanceSpan = document.getElementById('wallet-balance');
+
+const txHistoryTableBody = document.querySelector('#tx-history-table tbody');
+
+const logoutBtn = document.getElementById('logout-btn');
+
+const adminUserCount = document.getElementById('admin-user-count');
+const adminTxCount = document.getElementById('admin-tx-count');
+
+const txChartCanvas = document.getElementById('tx-chart');
+const txChartCtx = txChartCanvas.getContext('2d');
+
+// ======= Global State =======
+let users = loadUsers();
+let transactions = loadTransactions();
+let currentUser = null;
+
+// ======= Helper Functions =======
+function generateWalletNumber() {
+  // Wallet numbers format: WLTXXXX (X=digits)
+  const max = 9999;
+  let number;
+  do {
+    number = 'WLT' + Math.floor(Math.random() * (max + 1)).toString().padStart(4, '0');
+  } while (Object.values(users).some(u => u.walletNumber === number));
+  return number;
+}
+
+function showSection(section) {
+  // Hide all, show one
+  loginSection.classList.add('hidden');
+  registerSection.classList.add('hidden');
+  dashboardSection.classList.add('hidden');
+  section.classList.remove('hidden');
+}
+
+function clearErrors() {
+  loginError.textContent = '';
+  registerError.textContent = '';
+  transferMessage.textContent = '';
+}
+
+function saveAll() {
+  saveUsers(users);
+  saveTransactions(transactions);
+}
+
+function formatDate(timestamp) {
+  const d = new Date(timestamp);
+  return d.toLocaleString();
+}
+
+function isValidPin(pin) {
+  return /^\d{4}$/.test(pin);
+}
+
+// ======= Login/Register Toggle =======
+showRegisterLink.addEventListener('click', (e) => {
+  e.preventDefault();
+  clearErrors();
+  showSection(registerSection);
+});
+showLoginLink.addEventListener('click', (e) => {
+  e.preventDefault();
+  clearErrors();
+  showSection(loginSection);
+});
+
+// ======= Login Handler =======
+loginForm.addEventListener('submit', e => {
+  e.preventDefault();
+  clearErrors();
+
+  const username = loginForm['login-username'].value.trim().toLowerCase();
+  const password = loginForm['login-password'].value;
+
+  if (!users[username]) {
+    loginError.textContent = 'Invalid username or password.';
+    return;
+  }
+  if (users[username].password !== password) {
+    loginError.textContent = 'Invalid username or password.';
+    return;
+  }
+
+  currentUser = users[username];
+  loadDashboard();
+  showSection(dashboardSection);
+});
+
+// ======= Register Handler =======
+registerForm.addEventListener('submit', e => {
+  e.preventDefault();
+  clearErrors();
+
+  const fullname = registerForm['reg-fullname'].value.trim();
+  const email = registerForm['reg-email'].value.trim();
+  const phone = registerForm['reg-phone'].value.trim();
+  const password = registerForm['reg-password'].value;
+  const pin = registerForm['reg-pin'].value;
+
+  // Basic validations
+  if (!fullname || fullname.split(' ').length < 2) {
+    registerError.textContent = 'Enter your full name (Surname and First Name at least).';
+    return;
+  }
+  if (!email.includes('@')) {
+    registerError.textContent = 'Invalid email address.';
+    return;
+  }
+  if (!phone.match(/^\+2547\d{8}$/)) {
+    registerError.textContent = 'Phone number must be in format +2547XXXXXXXX.';
+    return;
+  }
+  if (password.length < 6) {
+    registerError.textContent = 'Password must be at least 6 characters.';
+    return;
+  }
+  if (!isValidPin(pin)) {
+    registerError.textContent = 'PIN must be exactly 4 digits.';
+    return;
+  }
+
+  // Check if email or phone or fullname already registered
+  if (Object.values(users).some(u => u.email === email)) {
+    registerError.textContent = 'Email already registered.';
+    return;
+  }
+  if (Object.values(users).some(u => u.phone === phone)) {
+    registerError.textContent = 'Phone number already registered.';
+    return;
+  }
+
+  // Create username from email prefix or fullname initials
+  let usernameCandidate = email.split('@')[0].toLowerCase();
+  let username = usernameCandidate;
+  let suffix = 1;
+  while (users[username]) {
+    username = usernameCandidate + suffix;
+    suffix++;
+  }
+
+  const walletNumber = generateWalletNumber();
+
+  // Save user
+  users[username] = {
+    username,
+    fullname,
+    email,
+    phone,
+    walletNumber,
+    password,
+    pin,
+    balance: 0,
+    role: 'user'
   };
-  const walletToUser = {};
-  for(let u in users){
-    if(users[u].wallets){
-      for(let c in users[u].wallets){
-        // generate wallet numbers from username+currency
-        const w = u.toUpperCase().slice(0,3)+"_"+c;
-        users[u].wallets[w]=users[u].wallets[c];
-        delete users[u].wallets[c];
-        walletToUser[w]=u;
-      }
-    }
-  }
-  let currentUser=null;
+  saveUsers(users);
 
-  // --- UI CONTROLS ---
-  function hideAll(){
-    document.querySelectorAll('.box,.dashboard').forEach(el=>el.classList.add('hidden'));
+  alert(`Registration successful! Your wallet number is ${walletNumber}. You can now login.`);
+
+  // Reset form and switch to login
+  registerForm.reset();
+  showSection(loginSection);
+});
+
+// ======= Dashboard Load =======
+function loadDashboard() {
+  welcomeMsg.textContent = `Welcome, ${currentUser.fullname}`;
+  walletNumberSpan.textContent = currentUser.walletNumber;
+  walletBalanceSpan.textContent = currentUser.balance.toFixed(2);
+
+  loadTransactionHistory();
+  if (currentUser.role === 'admin') {
+    adminSection.classList.remove('hidden');
+    renderAdminStats();
+    renderTxChart();
+  } else {
+    adminSection.classList.add('hidden');
   }
-  window.onload = ()=> {
-    hideAll(); showStart();
+}
+
+// ======= Logout =======
+logoutBtn.addEventListener('click', () => {
+  currentUser = null;
+  showSection(loginSection);
+  loginForm.reset();
+  registerForm.reset();
+  transferForm.reset();
+  clearErrors();
+});
+
+// ======= Transfer Money Handler =======
+transferForm.addEventListener('submit', e => {
+  e.preventDefault();
+  transferMessage.textContent = '';
+
+  const recipientWallet = transferForm['recipient-wallet'].value.trim().toUpperCase();
+  const amount = parseFloat(transferForm['transfer-amount'].value);
+  const pin = transferForm['transfer-pin'].value;
+
+  if (!users[currentUser.username]) {
+    transferMessage.textContent = 'Current user not found.';
+    return;
+  }
+
+  // Validate PIN
+  if (pin !== currentUser.pin) {
+    transferMessage.textContent = 'Invalid PIN.';
+    return;
+  }
+  if (recipientWallet === currentUser.walletNumber) {
+    transferMessage.textContent = 'Cannot send money to your own wallet.';
+    return;
+  }
+  // Find recipient user by wallet number
+  const recipientUser = Object.values(users).find(u => u.walletNumber === recipientWallet);
+  if (!recipientUser) {
+    transferMessage.textContent = 'Recipient wallet not found.';
+    return;
+  }
+  if (isNaN(amount) || amount <= 0) {
+    transferMessage.textContent = 'Enter a valid amount greater than zero.';
+    return;
+  }
+
+  // Transaction charge: 1.5% capped at 1000 KES
+  const charge = Math.min(amount * 0.015, 1000);
+  const totalDebit = amount + charge;
+
+  if (currentUser.balance < totalDebit) {
+    transferMessage.textContent = `Insufficient balance. You need KES ${totalDebit.toFixed(2)} including transaction charge.`;
+    return;
+  }
+
+  // Prevent identical transaction (same sender, recipient, amount) within 1 minute
+  const oneMinuteAgo = Date.now() - 60000;
+  const recentTx = transactions.find(tx =>
+    tx.sender === currentUser.walletNumber &&
+    tx.recipient === recipientWallet &&
+    tx.amount === amount &&
+    tx.timestamp > oneMinuteAgo
+  );
+  if (recentTx) {
+    transferMessage.textContent = 'Duplicate transaction detected within last 1 minute.';
+    return;
+  }
+
+  // Perform transfer
+  currentUser.balance -= totalDebit;
+  recipientUser.balance += amount;
+
+  // Save users after balance update
+  users[currentUser.username] = currentUser;
+  users[recipientUser.username] = recipientUser;
+  saveUsers(users);
+
+  // Log transaction
+  const tx = {
+    id: 'TX' + Date.now(),
+    sender: currentUser.walletNumber,
+    recipient: recipientWallet,
+    amount: amount,
+    charge: charge,
+    timestamp: Date.now()
   };
-  function showStart(){ hideAll(); document.getElementById('startPage').classList.remove('hidden'); }
-  function showLogin(){ hideAll(); document.getElementById('loginPage').classList.remove('hidden'); }
-  function showRegister(){ hideAll(); document.getElementById('registerPage').classList.remove('hidden'); }
-  function showDashboard(){
-    hideAll();
-    const u = users[currentUser];
-    if(u.role==='admin') renderAdmin(); else renderUser();
-  }
-  function logout(){
-    currentUser=null; sessionStorage.removeItem('user');
-    showStart();
-  }
+  transactions.push(tx);
+  saveTransactions(transactions);
 
-  // --- AUTH ---
-  function login(){
-    const u=document.getElementById('loginUsername').value.trim(),
-          p=document.getElementById('loginPassword').value;
-    if(users[u]&&users[u].password===p){
-      currentUser=u; sessionStorage.setItem('user',u); showDashboard();
-    } else alert('Invalid credentials');
-  }
-  function register(){
-    const s=document.getElementById('regSurname').value.trim(),
-          m=document.getElementById('regMiddle').value.trim(),
-          f=document.getElementById('regFirst').value.trim(),
-          id=document.getElementById('regID').value.trim(),
-          ph=document.getElementById('regPhone').value.trim(),
-          em=document.getElementById('regEmail').value.trim(),
-          pw=document.getElementById('regPassword').value,
-          pi=document.getElementById('regPin').value;
-    if(!s||!f||!id||!ph||!em||!pw||!pi) return alert('Fill all');
-    if(users[id]) return alert('User exists');
-    users[id]={
-      password:pw,pin:pi,role:'user',name:`${s} ${m} ${f}`,wallets:{},
-      logs:[]
-    };
-    alert('Registered! Login now');
-    showLogin();
-  }
+  // Update UI
+  walletBalanceSpan.textContent = currentUser.balance.toFixed(2);
+  loadTransactionHistory();
 
-  // --- USER DASHBOARD ---
-  function renderUser(){
-    document.getElementById('userDashboard').classList.remove('hidden');
-    const u=users[currentUser];
-    let info=`<b>Name:</b>${u.name}<br><b>Wallets:</b><ul>`;
-    for(let w in u.wallets) info+=`<li>${w}: ${u.wallets[w].toFixed(2)}</li>`;
-    info+='</ul>';
-    document.getElementById('userInfo').innerHTML=info;
-    displayLog();
-  }
-  function transfer(){
-    const w=document.getElementById('recipientWallet').value.trim(),
-          amt=parseFloat(document.getElementById('amount').value),
-          pin=document.getElementById('confirmPin').value;
-    const s=users[currentUser];
-    if(pin!==s.pin) return alert('Wrong PIN');
-    if(!walletToUser[w]) return alert('Unknown wallet');
-    if(isNaN(amt)||amt<=0) return alert('Invalid amt');
-    if(!s.wallets[w]){ // find same currency in any wallet
-      const [cur]=Object.keys(s.wallets);
-      const bal=s.wallets[cur];
-      const fee=Math.min(amt*0.01,1000);
-      if(bal<amt+fee) return alert('Insufficient');
-      s.wallets[cur]-=amt+fee;
-      const r=users[walletToUser[w]];
-      r.wallets[w]=(r.wallets[w]||0)+amt;
-      // admin fees
-      users.admin.wallets[cur]=(users.admin.wallets[cur]||0);
-      users.admin.fees[cur]=(users.admin.fees[cur]||0)+fee;
-      s.logs.push(`Sent ${amt} ${cur} to ${walletToUser[w]} (Fee ${fee})`);
-      alert('Sent');
-      renderUser();
-    }
-    displayLog();
-  }
-  function displayLog(){
-    document.getElementById('transactionLog').textContent=users[currentUser].logs.join('\n');
-  }
+  transferForm.reset();
+  transferMessage.style.color = 'green';
+  transferMessage.textContent = `Sent KES ${amount.toFixed(2)} to ${recipientWallet} with charge KES ${charge.toFixed(2)}.`;
+});
 
-  // --- ADMIN DASHBOARD ---
-  function renderAdmin(){
-    document.getElementById('adminDashboard').classList.remove('hidden');
-    const a=users.admin;
-    let balList='<ul>';
-    for(let c in a.wallets) balList+=`<li>Trading ${c}: ${a.wallets[c].toFixed(2)}</li>`;
-    balList+='</ul>';
-    document.getElementById('adminBal').innerHTML=balList;
+// ======= Load Transaction History =======
+function loadTransactionHistory() {
+  // Show last 20 transactions where current user is sender or recipient
+  const userWallet = currentUser.walletNumber;
+  const userTxs = transactions.filter(tx => tx.sender === userWallet || tx.recipient === userWallet)
+                              .sort((a,b) => b.timestamp - a.timestamp)
+                              .slice(0, 20);
 
-    // Sub-admin
-    document.getElementById('subMsg').textContent='';
-
-    // Render charts
-    const ctx1=document.getElementById('transferChart').getContext('2d'),
-          ctx2=document.getElementById('feeChart').getContext('2d'),
-          labels=Object.keys(users).filter(u=>users[u].role==='user'),
-          txs=labels.map(u=>users[u].logs.length),
-          fees=Object.keys(a.fees).map(c=>a.fees[c]);
-    new Chart(ctx1,{type:'bar',data:{labels, datasets:[{label:'Transfers',data:txs}]}}); 
-    new Chart(ctx2,{type:'bar',data:{labels:Object.keys(a.fees), datasets:[{label:'Fees',data:fees}]}}); 
-  }
-  function createSubAdmin(){
-    const n=document.getElementById('subName').value.trim(),
-          p=document.getElementById('subPass').value;
-    if(!n||!p) return alert('Fill fields');
-    users[n]={password:p,pin:'0000',role:'admin',wallets:{},fees:{},logs:[]};
-    document.getElementById('subMsg').textContent='Sub-admin created';
-    renderAdmin();
-  }
-  function adminSend(){
-    const w=document.getElementById('adminRecipient').value.trim(),
-          amt=parseFloat(document.getElementById('adminAmount').value);
-    if(!walletToUser[w]) return alert('Unknown wallet');
-    if(isNaN(amt)||amt<=0) return alert('Bad amt');
-    // assume all in first trading currency:
-    const cur=Object.keys(users.admin.wallets)[0];
-    if(users.admin.wallets[cur]<amt) return alert('Low funds');
-    users.admin.wallets[cur]-=amt;
-    const r=users[walletToUser[w]];
-    r.wallets[w]=(r.wallets[w]||0)+amt;
-    document.getElementById('adminSendMsg').textContent='Sent';
-    renderAdmin();
-  }
-</script>
-</body>
-</html>
+  txHistoryTableBody.innerHTML = '';
+  if (userTxs.length === 0) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 5;
+    td.textContent = 'No transactions yet.';
+    tr.appendChild(td);
+    txHistoryTableBody.append
