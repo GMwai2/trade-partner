@@ -80,6 +80,62 @@
   window.onload = function () {
     const uname = localStorage.getItem("loggedInUser");
     if (uname && uname in users) showDashboard();
+      }
+
+  function transferMoney() {
+    const senderUsername = localStorage.getItem("loggedInUser");
+    const sender = users[senderUsername];
+    const recipientUsername = document.getElementById("recipient").value;
+    const amount = parseFloat(document.getElementById("amount").value);
+    const statusEl = document.getElementById("transferStatus");
+
+    if (!recipientUsername || isNaN(amount) || amount <= 0) {
+      statusEl.textContent = "Please enter a valid recipient and amount.";
+      return;
+    }
+
+    if (amount > sender.balance) {
+      statusEl.textContent = "Insufficient balance.";
+      return;
+    }
+
+    const recipient = users[recipientUsername];
+    sender.balance -= amount;
+    recipient.balance += amount;
+
+    // Update balance display
+    document.getElementById("balance").textContent = sender.balance.toLocaleString();
+    statusEl.textContent = `✅ Successfully sent ${amount.toLocaleString()} KES to ${recipientUsername.toUpperCase()}`;
+  }
+
+  function logout() {
+    localStorage.removeItem("loggedInUser");
+    location.reload();
+  }
+
+  function showAdminStats() {
+    const uname = localStorage.getItem("loggedInUser");
+    if (uname !== "admin") return;
+
+    document.getElementById("adminSection").style.display = "block";
+    const userCount = Object.keys(users).length;
+    let totalFunds = 0;
+    for (let u in users) {
+      totalFunds += users[u].balance;
+    }
+
+    document.getElementById("userCount").textContent = userCount;
+    document.getElementById("totalFunds").textContent = totalFunds.toLocaleString();
+  }
+
+  // Auto-show dashboard if already logged in
+  window.onload = () => {
+    const uname = localStorage.getItem("loggedInUser");
+    if (uname && uname in users) {
+      showDashboard();
+      showAdminStats();
+    }
+  };
   };
 </script>
 
