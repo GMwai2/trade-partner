@@ -11,6 +11,7 @@
     #dashboard { display: none; padding: 30px; background: white; max-width: 600px; margin: 50px auto; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
     .logout { float: right; background: red; color: white; border: none; padding: 5px 10px; }
     .error { color: red; text-align: center; }
+    #transferSection, #adminSection { margin-top: 20px; border-top: 1px solid #ddd; padding-top: 20px; }
   </style>
 </head>
 <body>
@@ -29,6 +30,20 @@
   <p><strong>Email:</strong> <span id="userEmail"></span></p>
   <p><strong>Wallet Number:</strong> <span id="walletNumber"></span></p>
   <p><strong>Balance:</strong> <span id="balance"></span> KES</p>
+
+  <div id="transferSection">
+    <h3>Transfer Funds</h3>
+    <input type="text" id="recipient" placeholder="Recipient Username">
+    <input type="number" id="amount" placeholder="Amount to Transfer">
+    <button onclick="transferMoney()">Send</button>
+    <p id="transferStatus" class="error"></p>
+  </div>
+
+  <div id="adminSection" style="display: none;">
+    <h3>Admin Stats</h3>
+    <p>Total Registered Users: <span id="userCount"></span></p>
+    <p>Total Funds in System: <span id="totalFunds"></span> KES</p>
+  </div>
 </div>
 
 <script>
@@ -53,9 +68,13 @@
       return;
     }
 
-    // Successful login
     localStorage.setItem("loggedInUser", uname);
     showDashboard();
+  }
+
+  function logout() {
+    localStorage.removeItem("loggedInUser");
+    location.reload();
   }
 
   function showDashboard() {
@@ -69,28 +88,42 @@
     document.getElementById("userEmail").textContent = user.email;
     document.getElementById("walletNumber").textContent = user.wallet;
     document.getElementById("balance").textContent = user.balance.toLocaleString();
+
+    if (uname === "admin") {
+      showAdminStats();
+    }
   }
 
-  function logout() {
-    localStorage.removeItem("loggedInUser");
-    location.reload();
+  function showAdminStats() {
+    document.getElementById("adminSection").style.display = "block";
+    const userCount = Object.keys(users).length;
+    let totalFunds = 0;
+    for (let u in users) {
+      totalFunds += users[u].balance;
+    }
+    document.getElementById("userCount").textContent = userCount;
+    document.getElementById("totalFunds").textContent = totalFunds.toLocaleString();
   }
-
-  // On page load, show dashboard if logged in
-  window.onload = function () {
-    const uname = localStorage.getItem("loggedInUser");
-    if (uname && uname in users) showDashboard();
-      }
 
   function transferMoney() {
     const senderUsername = localStorage.getItem("loggedInUser");
     const sender = users[senderUsername];
-    const recipientUsername = document.getElementById("recipient").value;
+    const recipientUsername = document.getElementById("recipient").value.trim().toLowerCase();
     const amount = parseFloat(document.getElementById("amount").value);
     const statusEl = document.getElementById("transferStatus");
 
     if (!recipientUsername || isNaN(amount) || amount <= 0) {
       statusEl.textContent = "Please enter a valid recipient and amount.";
+      return;
+    }
+
+    if (!(recipientUsername in users)) {
+      statusEl.textContent = "Recipient does not exist.";
+      return;
+    }
+
+    if (recipientUsername === senderUsername) {
+      statusEl.textContent = "You cannot send money to yourself.";
       return;
     }
 
@@ -103,39 +136,16 @@
     sender.balance -= amount;
     recipient.balance += amount;
 
-    // Update balance display
     document.getElementById("balance").textContent = sender.balance.toLocaleString();
+    statusEl.style.color = "green";
     statusEl.textContent = `✅ Successfully sent ${amount.toLocaleString()} KES to ${recipientUsername.toUpperCase()}`;
   }
 
-  function logout() {
-    localStorage.removeItem("loggedInUser");
-    location.reload();
-  }
-
-  function showAdminStats() {
-    const uname = localStorage.getItem("loggedInUser");
-    if (uname !== "admin") return;
-
-    document.getElementById("adminSection").style.display = "block";
-    const userCount = Object.keys(users).length;
-    let totalFunds = 0;
-    for (let u in users) {
-      totalFunds += users[u].balance;
-    }
-
-    document.getElementById("userCount").textContent = userCount;
-    document.getElementById("totalFunds").textContent = totalFunds.toLocaleString();
-  }
-
-  // Auto-show dashboard if already logged in
-  window.onload = () => {
+  window.onload = function () {
     const uname = localStorage.getItem("loggedInUser");
     if (uname && uname in users) {
       showDashboard();
-      showAdminStats();
     }
-  };
   };
 </script>
 
