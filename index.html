@@ -1,228 +1,193 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Wallet Transfer Platform</title>
+  <title>Wallet Platform</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; }
-    input, select, button { display: block; margin: 10px 0; padding: 8px; width: 100%; max-width: 300px; }
-    #recipientDetails { margin-top: 10px; }
+    body { font-family: Arial; padding: 20px; }
+    #dashboard, #adminPanel { display: none; margin-top: 20px; }
+    .hidden { display: none; }
+    table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 5px; }
+    input { margin: 4px; padding: 5px; }
   </style>
 </head>
 <body>
 
-<!-- Login Section -->
-<div id="loginSection">
-  <h2>Login</h2>
-  <input type="text" id="loginUsername" placeholder="Username" />
-  <input type="password" id="loginPassword" placeholder="Password" />
-  <button onclick="login()">Login</button>
-  <p>No account? <a href="#" onclick="showRegister()">Register here</a></p>
-</div>
+<h2>Wallet Platform</h2>
 
-<!-- Registration Section -->
-<div id="registerSection" style="display:none;">
-  <h2>Register</h2>
-  <input type="text" id="regName" placeholder="Full Name" />
-  <input type="text" id="regUsername" placeholder="Username" />
-  <input type="password" id="regPassword" placeholder="Password" />
-  <input type="text" id="regPin" placeholder="4-digit PIN" maxlength="4" />
-  <select id="regCurrency">
-    <option value="KES">KES</option>
-    <option value="USD">USD</option>
-    <option value="EUR">EUR</option>
-    <option value="JPY">JPY</option>
-  </select>
+<div id="authSection">
+  <h3>Register</h3>
+  <input placeholder="Surname" id="surname">
+  <input placeholder="Middle Name" id="middlename">
+  <input placeholder="First Name" id="firstname"><br>
+  <input placeholder="ID/Passport" id="id">
+  <input placeholder="Phone" id="phone">
+  <input placeholder="Email" id="email"><br>
+  <input placeholder="Password" id="password" type="password">
+  <input placeholder="PIN" id="pin" type="password"><br>
   <button onclick="register()">Register</button>
-  <p>Have account? <a href="#" onclick="showLogin()">Login here</a></p>
+
+  <h3>Login</h3>
+  <input placeholder="ID/Passport" id="loginID">
+  <input placeholder="Password" id="loginPass" type="password">
+  <button onclick="login()">Login</button>
 </div>
 
-<!-- Dashboard Section -->
-<div id="dashboard" style="display:none;">
-  <h2 id="welcomeMsg"></h2>
-  <p><strong>Wallet Number:</strong> <span id="walletNum"></span></p>
-  <p><strong>Balance:</strong> <span id="balance"></span></p>
+<div id="dashboard">
+  <h3>Welcome, <span id="username"></span></h3>
+  <p>Transaction Wallet: KES <span id="transactionWallet"></span></p>
+  <p>Trading Wallet: KES <span id="tradingWallet"></span></p>
 
-  <h3>Make a Transfer</h3>
-  <label for="transferType">Transfer Type:</label>
-  <select id="transferType" onchange="updateTransferForm()">
-    <option value="wallet">Other Wallet (platform)</option>
-    <option value="mobile">Mobile Banking</option>
-    <option value="bank">Bank Account</option>
-  </select>
+  <div id="adminPanel">
+    <h3>Admin Panel</h3>
+    <button onclick="transferAdminFunds()">Move Funds to Trading Wallet</button>
+    <button onclick="exportKYC()">Export KYC to Excel</button>
 
-  <div id="transferForm"></div>
-  <button onclick="submitTransfer()">Send</button>
-  <button onclick="logout()" style="margin-top:20px;">Logout</button>
+    <canvas id="transactionChart" width="300"></canvas>
+    <canvas id="tradingChart" width="300"></canvas>
+  </div>
+
+  <h4>Transaction History</h4>
+  <table id="historyLog"><thead><tr><th>From</th><th>To</th><th>Amount</th><th>Type</th><th>Date</th></tr></thead><tbody></tbody></table>
+
+  <button onclick="logout()">Logout</button>
 </div>
 
 <script>
-  const exchangeRates = { KES: 1, USD: 145, EUR: 160, JPY: 1.1 };
-  let users = JSON.parse(localStorage.getItem("users") || "{}");
+let users = JSON.parse(localStorage.getItem("users")) || [];
+let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
 
-  function saveUsers() {
-    localStorage.setItem("users", JSON.stringify(users));
-  }
-
-  function showLogin() {
-    document.getElementById("loginSection").style.display = "block";
-    document.getElementById("registerSection").style.display = "none";
-    document.getElementById("dashboard").style.display = "none";
-  }
-
-  function showRegister() {
-    document.getElementById("loginSection").style.display = "none";
-    document.getElementById("registerSection").style.display = "block";
-    document.getElementById("dashboard").style.display = "none";
-  }
-
-  function showDashboard() {
-    const username = sessionStorage.getItem("loggedInUser");
-    if (!username || !users[username]) return showLogin();
-    const user = users[username];
-
-    document.getElementById("loginSection").style.display = "none";
-    document.getElementById("registerSection").style.display = "none";
-    document.getElementById("dashboard").style.display = "block";
-
-    document.getElementById("welcomeMsg").innerText = `Welcome, ${user.name}`;
-    document.getElementById("walletNum").innerText = user.walletNumber;
-    document.getElementById("balance").innerText = `${user.balance.toFixed(2)} ${user.currency}`;
-    updateTransferForm();
-  }
-
-  function login() {
-    const username = document.getElementById("loginUsername").value.trim().toLowerCase();
-    const password = document.getElementById("loginPassword").value;
-    if (!username || !password || !users[username] || users[username].password !== password) {
-      return alert("Invalid username or password");
-    }
-    sessionStorage.setItem("loggedInUser", username);
-    showDashboard();
-  }
-
-  function register() {
-    const name = document.getElementById("regName").value.trim();
-    const username = document.getElementById("regUsername").value.trim().toLowerCase();
-    const password = document.getElementById("regPassword").value;
-    const pin = document.getElementById("regPin").value;
-    const currency = document.getElementById("regCurrency").value;
-
-    if (!name || !username || !password || !/^\d{4}$/.test(pin)) return alert("Fill all fields properly");
-    if (users[username]) return alert("Username already exists");
-
-    const walletNumber = "GALA" + Math.floor(1000 + Math.random() * 9000);
-    users[username] = { name, password, pin, currency, walletNumber, balance: 0 };
-    saveUsers();
-    alert("Registration successful!");
-    showLogin();
-  }
-
-  function logout() {
-    sessionStorage.removeItem("loggedInUser");
-    showLogin();
-  }
-
-  function updateTransferForm() {
-    const type = document.getElementById("transferType").value;
-    const formDiv = document.getElementById("transferForm");
-    formDiv.innerHTML = "";
-
-    if (type === "wallet") {
-      formDiv.innerHTML = `
-        <input type="text" id="recipientWallet" placeholder="Recipient Wallet Number" />
-        <button type="button" onclick="loadRecipientDetails()">Load Recipient Details</button>
-        <div id="recipientDetails"></div>
-        <input type="number" id="transferAmount" placeholder="Amount to Send" min="1" />
-        <input type="password" id="authPin" placeholder="Your 4-digit PIN" maxlength="4" />
-      `;
-    } else if (type === "mobile") {
-      formDiv.innerHTML = `
-        <input type="text" id="mobileNumber" placeholder="07XXXXXXXX" />
-        <input type="number" id="transferAmount" placeholder="Amount to Send" min="1" />
-        <input type="password" id="authPin" placeholder="Your 4-digit PIN" maxlength="4" />
-      `;
-    } else if (type === "bank") {
-      formDiv.innerHTML = `
-        <input type="text" id="bankAccountNumber" placeholder="Bank Account Number" />
-        <input type="text" id="bankName" placeholder="Bank Name" />
-        <input type="number" id="transferAmount" placeholder="Amount to Send" min="1" />
-        <input type="password" id="authPin" placeholder="Your 4-digit PIN" maxlength="4" />
-      `;
-    }
-  }
-
-  function loadRecipientDetails() {
-    const recipientWallet = document.getElementById("recipientWallet").value.trim().toUpperCase();
-    const detailsDiv = document.getElementById("recipientDetails");
-    const recipient = Object.values(users).find(u => u.walletNumber === recipientWallet);
-    if (!recipient) {
-      detailsDiv.innerHTML = "<p style='color:red;'>Recipient not found</p>";
-    } else {
-      detailsDiv.innerHTML = `
-        <p><strong>Name:</strong> ${recipient.name}</p>
-        <p><strong>Currency:</strong> ${recipient.currency}</p>
-        <p><strong>Wallet Number:</strong> ${recipient.walletNumber}</p>
-      `;
-    }
-  }
-
-  function toKES(amount, currency) {
-    return amount * (exchangeRates[currency] || 1);
-  }
-
-  function fromKES(kesAmount, currency) {
-    return kesAmount / (exchangeRates[currency] || 1);
-  }
-
-  function submitTransfer() {
-    const username = sessionStorage.getItem("loggedInUser");
-    const user = users[username];
-    const type = document.getElementById("transferType").value;
-    const pin = document.getElementById("authPin")?.value.trim();
-    const amount = Number(document.getElementById("transferAmount")?.value);
-
-    if (!pin || pin !== user.pin || !amount || amount <= 0) return alert("Check PIN and amount");
-
-    let chargeKES = Math.min(toKES(amount, user.currency) * 0.0075, 1000);
-    let charge = fromKES(chargeKES, user.currency);
-    let total = amount + charge;
-
-    if (user.balance < total) return alert(`Insufficient balance. Need ${total.toFixed(2)} including fee.`);
-
-    if (type === "wallet") {
-      const walletID = document.getElementById("recipientWallet").value.trim().toUpperCase();
-      if (walletID === user.walletNumber) return alert("Cannot send to your own wallet");
-      const recipient = Object.values(users).find(u => u.walletNumber === walletID);
-      if (!recipient) return alert("Recipient not found");
-
-      user.balance -= total;
-      recipient.balance += amount;
-      alert(`Sent ${amount} ${user.currency}. Fee: ${charge.toFixed(2)} ${user.currency}`);
-
-    } else if (type === "mobile") {
-      const mobile = document.getElementById("mobileNumber").value.trim();
-      if (!/^07\d{8}$/.test(mobile)) return alert("Invalid mobile number");
-      user.balance -= total;
-      alert(`Mobile transfer to ${mobile} simulated. Fee: ${charge.toFixed(2)} ${user.currency}`);
-
-    } else if (type === "bank") {
-      const acc = document.getElementById("bankAccountNumber").value.trim();
-      const bank = document.getElementById("bankName").value.trim();
-      if (!acc || !bank) return alert("Enter bank account and name");
-      user.balance -= total;
-      alert(`Bank transfer to ${acc} at ${bank} simulated. Fee: ${charge.toFixed(2)} ${user.currency}`);
-    }
-
-    saveUsers();
-    showDashboard();
-  }
-
-  window.onload = function() {
-    const user = sessionStorage.getItem("loggedInUser");
-    if (user && users[user]) showDashboard();
-    else showLogin();
+function register() {
+  let user = {
+    surname: document.getElementById("surname").value,
+    middlename: document.getElementById("middlename").value,
+    firstname: document.getElementById("firstname").value,
+    id: document.getElementById("id").value,
+    phone: document.getElementById("phone").value,
+    email: document.getElementById("email").value,
+    password: document.getElementById("password").value,
+    pin: document.getElementById("pin").value,
+    transactionWallet: 0,
+    tradingWallet: 0,
+    username: document.getElementById("id").value
   };
+  if (users.some(u => u.id === user.id)) return alert("User exists");
+  users.push(user);
+  localStorage.setItem("users", JSON.stringify(users));
+  alert("Registered successfully!");
+}
+
+function login() {
+  let id = document.getElementById("loginID").value;
+  let pass = document.getElementById("loginPass").value;
+  let user = users.find(u => u.id === id && u.password === pass);
+  if (!user) return alert("Invalid credentials");
+
+  sessionStorage.setItem("currentUser", JSON.stringify(user));
+  document.getElementById("authSection").style.display = "none";
+  document.getElementById("dashboard").style.display = "block";
+
+  document.getElementById("username").innerText = user.firstname;
+  document.getElementById("transactionWallet").innerText = user.transactionWallet;
+  document.getElementById("tradingWallet").innerText = user.tradingWallet;
+
+  if (user.id === "admin") {
+    document.getElementById("adminPanel").style.display = "block";
+    drawGraphs();
+  }
+
+  loadHistory(user.id);
+}
+
+function logout() {
+  sessionStorage.removeItem("currentUser");
+  document.getElementById("dashboard").style.display = "none";
+  document.getElementById("authSection").style.display = "block";
+}
+
+function transferAdminFunds() {
+  let user = JSON.parse(sessionStorage.getItem("currentUser"));
+  let amount = prompt("Amount to move to trading wallet:");
+  amount = parseFloat(amount);
+  if (user.transactionWallet < amount) return alert("Insufficient funds");
+  user.transactionWallet -= amount;
+  user.tradingWallet += amount;
+
+  logTransaction(user.id, "admin_trading", amount, "admin_move");
+
+  updateUser(user);
+  alert("Moved successfully!");
+  location.reload();
+}
+
+function logTransaction(from, to, amount, type) {
+  transactions.push({
+    from, to, amount, type,
+    date: new Date().toLocaleString()
+  });
+  localStorage.setItem("transactions", JSON.stringify(transactions));
+}
+
+function loadHistory(userID) {
+  let tbody = document.querySelector("#historyLog tbody");
+  tbody.innerHTML = "";
+  transactions.filter(t => t.from === userID || t.to === userID)
+    .forEach(t => {
+      tbody.innerHTML += `<tr><td>${t.from}</td><td>${t.to}</td><td>${t.amount}</td><td>${t.type}</td><td>${t.date}</td></tr>`;
+    });
+}
+
+function updateUser(user) {
+  let i = users.findIndex(u => u.id === user.id);
+  users[i] = user;
+  localStorage.setItem("users", JSON.stringify(users));
+  sessionStorage.setItem("currentUser", JSON.stringify(user));
+}
+
+function drawGraphs() {
+  let ctx1 = document.getElementById("transactionChart").getContext("2d");
+  let ctx2 = document.getElementById("tradingChart").getContext("2d");
+  let admin = users.find(u => u.id === "admin");
+
+  new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: ["Transaction Wallet"],
+      datasets: [{ label: 'KES', data: [admin.transactionWallet], backgroundColor: 'blue' }]
+    }
+  });
+
+  new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: ["Trading Wallet"],
+      datasets: [{ label: 'KES', data: [admin.tradingWallet], backgroundColor: 'green' }]
+    }
+  });
+}
+
+function exportKYC() {
+  let data = users.map(u => ({
+    Surname: u.surname,
+    MiddleName: u.middlename,
+    FirstName: u.firstname,
+    ID: u.id,
+    Phone: u.phone,
+    Email: u.email
+  }));
+  let ws = XLSX.utils.json_to_sheet(data);
+  let wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "KYC Data");
+  XLSX.writeFile(wb, "KYC_Report.xlsx");
+}
+
+// Placeholder notification
+function sendNotification(phone, email, message) {
+  console.log(`SMS to ${phone}: ${message}`);
+  console.log(`Email to ${email}: ${message}`);
+}
 </script>
+
 </body>
 </html>
