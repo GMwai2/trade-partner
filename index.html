@@ -10,20 +10,18 @@
     .hidden { display: none; }
     input, select, button { margin: 5px 0; padding: 8px; width: 100%; max-width: 300px; }
     label { display: block; margin-top: 10px; font-weight: bold; }
-    #dashboard, #adminDashboard, #transactionHistory { margin-top: 20px; background: white; padding: 20px; border-radius: 5px; }
+    #dashboard, #adminDashboard, #transactionHistory, #registerSection, #otpSection { margin-top: 20px; background: white; padding: 20px; border-radius: 5px; }
     #messages { color: green; margin-bottom: 10px; }
     #errors { color: red; margin-bottom: 10px; }
     canvas { max-width: 600px; margin: 10px 0; }
     table { border-collapse: collapse; width: 100%; max-width: 800px; margin-top: 10px; }
     th, td { border: 1px solid #ddd; padding: 8px; }
     th { background: #333; color: white; }
-    #kycList img { max-height: 100px; display: block; margin: 5px 0; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 <h1>Wallet Platform</h1>
-
 <div id="messages"></div>
 <div id="errors"></div>
 
@@ -35,54 +33,47 @@
   <label for="loginPassword">Password</label>
   <input type="password" id="loginPassword" placeholder="Password" />
   <button onclick="login()">Login</button>
+  <p>Don't have an account? <a href="#" onclick="showRegister()">Register here</a></p>
+</div>
 
+<!-- Registration -->
+<div id="registerSection" class="hidden">
   <h2>Register</h2>
-  <form id="registerForm" onsubmit="return registerUser(event)">
-    <label for="regSurname">Surname *</label>
-    <input type="text" id="regSurname" required />
-    <label for="regMiddleName">Middle Name</label>
-    <input type="text" id="regMiddleName" />
-    <label for="regFirstName">First Name *</label>
-    <input type="text" id="regFirstName" required />
-    <label for="regID">ID / Passport Number *</label>
-    <input type="text" id="regID" required />
-    <label for="regPhone">Phone Number *</label>
-    <input type="tel" id="regPhone" required />
-    <label for="regEmail">Email Address *</label>
-    <input type="email" id="regEmail" required />
-    <label for="regPassword">Password *</label>
-    <input type="password" id="regPassword" required />
-    <label for="regPIN">4-Digit PIN *</label>
-    <input type="password" id="regPIN" maxlength="4" pattern="\\d{4}" required />
-
-    <label for="regIDFile">Upload Scanned ID/Passport *</label>
-    <input type="file" id="regIDFile" accept="image/*,.pdf" required />
-    <label for="regSelfieFile">Upload Live Selfie *</label>
-    <input type="file" id="regSelfieFile" accept="image/*" required />
-
-    <button type="submit">Register</button>
-  </form>
+  <label for="surname">Surname</label>
+  <input type="text" id="surname" placeholder="Surname" />
+  <label for="middleName">Middle Name (optional)</label>
+  <input type="text" id="middleName" placeholder="Middle Name" />
+  <label for="firstName">First Name</label>
+  <input type="text" id="firstName" placeholder="First Name" />
+  <label for="idNumber">ID/Passport Number</label>
+  <input type="text" id="idNumber" placeholder="ID or Passport" />
+  <label for="phone">Phone Number</label>
+  <input type="text" id="phone" placeholder="Phone Number" />
+  <label for="email">Email</label>
+  <input type="email" id="email" placeholder="Email Address" />
+  <label for="regPassword">Password</label>
+  <input type="password" id="regPassword" placeholder="Password" />
+  <label for="pin">4-digit PIN</label>
+  <input type="password" id="pin" maxlength="4" placeholder="PIN" />
+  <label for="idUpload">Upload ID</label>
+  <input type="file" id="idUpload" />
+  <label for="selfieUpload">Upload Selfie</label>
+  <input type="file" id="selfieUpload" />
+  <button onclick="initiateOTP()">Register</button>
 </div>
 
-<!-- Admin Dashboard -->
-<div id="adminDashboard" class="hidden">
-  <h2>Admin Dashboard</h2>
-  <p>Welcome Admin!</p>
-  <h3>Wallet Balances</h3>
-  <p><strong>Transaction Wallet Total:</strong> KES <span id="adminTransactionWalletTotal">0</span></p>
-  <p><strong>Trading Wallet Total:</strong> KES <span id="adminTradingWalletTotal">0</span></p>
-  <canvas id="transactionWalletChart"></canvas>
-  <canvas id="tradingWalletChart"></canvas>
-
-  <h3>Registered KYC Documents</h3>
-  <div id="kycList"></div>
-
-  <button onclick="logout()">Logout</button>
+<!-- OTP Verification -->
+<div id="otpSection" class="hidden">
+  <h2>Verify OTP</h2>
+  <p>A verification code has been sent to your phone and email.</p>
+  <label for="otpCode">Enter OTP Code</label>
+  <input type="text" id="otpCode" />
+  <button onclick="verifyOTP()">Verify & Complete Registration</button>
 </div>
-
 <script>
 const USERS_KEY = 'walletUsers';
 const LOGGED_IN_KEY = 'walletLoggedInUser';
+const OTP_TEMP = '123456'; // Simulated OTP for now
 
 const hardcodedAdmin = {
   username: 'admin',
@@ -95,8 +86,17 @@ const hardcodedAdmin = {
   idNumber: 'ADMIN001',
   pin: '0000',
   wallets: { transaction: 1000000, trading: 500000 },
-  isAdmin: true
+  isAdmin: true,
+  walletNumber: 'ADMINWALLET0001'
 };
+
+let tempUser = null;
+
+// Utilities
+function generateWalletNumber(id) {
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  return `WALLET${id}${rand}`;
+}
 
 function saveUser(user) {
   let users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
@@ -109,18 +109,66 @@ function saveUser(user) {
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
 }
 
-function loadUsers() {
-  return JSON.parse(localStorage.getItem(USERS_KEY)) || [];
+function showRegister() {
+  document.getElementById('authSection').classList.add('hidden');
+  document.getElementById('registerSection').classList.remove('hidden');
 }
 
-function saveUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+// Step 1: Collect data, trigger OTP
+function initiateOTP() {
+  const user = {
+    surname: document.getElementById('surname').value.trim(),
+    middleName: document.getElementById('middleName').value.trim(),
+    firstName: document.getElementById('firstName').value.trim(),
+    idNumber: document.getElementById('idNumber').value.trim(),
+    phone: document.getElementById('phone').value.trim(),
+    email: document.getElementById('email').value.trim(),
+    password: document.getElementById('regPassword').value.trim(),
+    pin: document.getElementById('pin').value.trim(),
+    isAdmin: false,
+    wallets: { transaction: 0, trading: 0 },
+    idUpload: document.getElementById('idUpload').files[0]?.name || '',
+    selfieUpload: document.getElementById('selfieUpload').files[0]?.name || '',
+    walletNumber: '',
+    username: ''
+  };
+
+  if (!user.surname || !user.firstName || !user.idNumber || !user.phone || !user.email || !user.password || !user.pin) {
+    showError('Please fill in all required fields.');
+    return;
+  }
+
+  user.username = user.idNumber;
+  user.walletNumber = generateWalletNumber(user.idNumber);
+  tempUser = user;
+
+  document.getElementById('registerSection').classList.add('hidden');
+  document.getElementById('otpSection').classList.remove('hidden');
+
+  showMessage(`Simulated OTP sent: ${OTP_TEMP}`);
 }
 
+// Step 2: Verify OTP and complete registration
+function verifyOTP() {
+  const code = document.getElementById('otpCode').value.trim();
+  if (code !== OTP_TEMP) {
+    showError('Incorrect OTP.');
+    return;
+  }
+
+  if (tempUser) {
+    saveUser(tempUser);
+    showMessage('Registration complete. You can now log in.');
+    document.getElementById('otpSection').classList.add('hidden');
+    document.getElementById('authSection').classList.remove('hidden');
+  }
+}
+
+// Login
 function login() {
   const username = document.getElementById('loginUsername').value.trim();
   const password = document.getElementById('loginPassword').value.trim();
-  let users = loadUsers();
+  let users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
 
   if (username === hardcodedAdmin.username && password === hardcodedAdmin.password) {
     saveUser(hardcodedAdmin);
@@ -142,7 +190,7 @@ function login() {
   if (user.isAdmin) {
     showAdminDashboard();
   } else {
-    showError('Only admin access is enabled for now.');
+    showUserDashboard(user);
   }
 }
 
@@ -163,16 +211,15 @@ function showMessage(message) {
 
 function showAdminDashboard() {
   document.getElementById('authSection').classList.add('hidden');
-  document.getElementById('adminDashboard').classList.remove('hidden');
+  document.getElementById('adminDashboard')?.classList.remove('hidden');
   renderAdminGraphs();
-  renderKYCList();
 }
 
 function renderAdminGraphs() {
-  let users = loadUsers();
+  let users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
   users = [hardcodedAdmin, ...users.filter(u => u.username !== 'admin')];
 
-  const transactionLabels = users.map(u => u.username);
+  const labels = users.map(u => u.username);
   const transactionData = users.map(u => u.wallets.transaction || 0);
   const tradingData = users.map(u => u.wallets.trading || 0);
 
@@ -182,7 +229,7 @@ function renderAdminGraphs() {
   new Chart(document.getElementById('transactionWalletChart'), {
     type: 'bar',
     data: {
-      labels: transactionLabels,
+      labels: labels,
       datasets: [{
         label: 'Transaction Wallets',
         backgroundColor: '#4caf50',
@@ -194,7 +241,7 @@ function renderAdminGraphs() {
   new Chart(document.getElementById('tradingWalletChart'), {
     type: 'bar',
     data: {
-      labels: transactionLabels,
+      labels: labels,
       datasets: [{
         label: 'Trading Wallets',
         backgroundColor: '#2196f3',
@@ -204,101 +251,19 @@ function renderAdminGraphs() {
   });
 }
 
-function generateUsername(idNumber) {
-  return 'user_' + idNumber;
-}
-
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-async function registerUser(event) {
-  event.preventDefault();
-  showError('');
-  showMessage('');
-
-  const users = loadUsers();
-
-  const surname = document.getElementById('regSurname').value.trim();
-  const middleName = document.getElementById('regMiddleName').value.trim();
-  const firstName = document.getElementById('regFirstName').value.trim();
-  const idNumber = document.getElementById('regID').value.trim();
-  const phone = document.getElementById('regPhone').value.trim();
-  const email = document.getElementById('regEmail').value.trim();
-  const password = document.getElementById('regPassword').value;
-  const pin = document.getElementById('regPIN').value;
-  const idFile = document.getElementById('regIDFile').files[0];
-  const selfieFile = document.getElementById('regSelfieFile').files[0];
-
-  if (!idFile || !selfieFile) {
-    showError("Please upload both ID and selfie.");
-    return;
-  }
-
-  const username = generateUsername(idNumber);
-
-  if (users.find(u => u.username === username)) {
-    showError("User with this ID already exists.");
-    return;
-  }
-
-  const idBase64 = await fileToBase64(idFile);
-  const selfieBase64 = await fileToBase64(selfieFile);
-
-  const newUser = {
-    username,
-    password,
-    email,
-    phone,
-    surname,
-    middleName,
-    firstName,
-    idNumber,
-    pin,
-    wallets: { transaction: 0, trading: 0 },
-    isAdmin: false,
-    kyc: {
-      idBase64,
-      selfieBase64
-    }
-  };
-
-  users.push(newUser);
-  saveUsers(users);
-  showMessage("Registration successful! You may now log in.");
-  document.getElementById('registerForm').reset();
-}
-
-function renderKYCList() {
-  const users = loadUsers();
-  const kycListDiv = document.getElementById('kycList');
-  kycListDiv.innerHTML = '';
-
-  users.filter(u => !u.isAdmin).forEach(u => {
-    const div = document.createElement('div');
-    div.innerHTML = `
-      <p><strong>${u.surname} ${u.middleName} ${u.firstName}</strong> (${u.username})</p>
-      <p>ID: ${u.idNumber}, Phone: ${u.phone}, Email: ${u.email}</p>
-      <p>ID Document: <a href="${u.kyc.idBase64}" target="_blank">View</a></p>
-      <p>Selfie:<br><img src="${u.kyc.selfieBase64}" alt="Selfie" /></p>
-      <hr />
-    `;
-    kycListDiv.appendChild(div);
-  });
-}
-
-// Auto-show admin dashboard if logged in
+// Auto-login if session is active
 window.onload = () => {
   const user = JSON.parse(localStorage.getItem(LOGGED_IN_KEY));
-  if (user && user.isAdmin) {
+  if (user?.isAdmin) {
     showAdminDashboard();
+  } else if (user) {
+    showUserDashboard(user);
   }
 };
+
+function showUserDashboard(user) {
+  alert(`Welcome ${user.firstName}! Dashboard coming soon.`);
+}
 </script>
 </body>
 </html>
