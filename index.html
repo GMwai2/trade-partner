@@ -1,560 +1,390 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Wallet Platform</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f0f2f5; }
-    h2 { margin-top: 0; }
-    .hidden { display: none; }
-    input, select, button { margin: 5px 0; padding: 8px; width: 100%; max-width: 300px; }
-    label { display: block; margin-top: 10px; font-weight: bold; }
-    #dashboard, #adminDashboard, #transactionHistory, #registerSection, #otpSection, #transferSection, #kycStatus, #chartsSection {
-      margin-top: 20px; background: white; padding: 20px; border-radius: 5px;
-    }
-    #messages { color: green; margin-bottom: 10px; }
-    #errors { color: red; margin-bottom: 10px; }
-    canvas { max-width: 600px; margin: 10px 0; }
-    table { border-collapse: collapse; width: 100%; max-width: 800px; margin-top: 10px; }
-    th, td { border: 1px solid #ddd; padding: 8px; }
-    th { background: #333; color: white; }
-    .toggle-buttons { margin-top: 10px; }
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Wallet Platform - Full Demo</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 1rem; background:#f4f4f4; }
+  h1, h2 { text-align: center; }
+  .hidden { display: none; }
+  label { display: block; margin-top: 0.8rem; }
+  input, select { padding: 0.4rem; width: 100%; max-width: 300px; }
+  button { margin-top: 1rem; padding: 0.6rem 1rem; cursor: pointer; }
+  #dashboard, #adminDashboard { margin-top: 2rem; }
+  table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+  th, td { border: 1px solid #ccc; padding: 0.4rem; text-align: center; }
+  .error { color: red; margin-top: 0.5rem; }
+  .success { color: green; margin-top: 0.5rem; }
+  #chargeGraph { width: 100%; max-width: 600px; margin: 1rem auto; }
+</style>
 </head>
 <body>
-  <h1>Wallet Platform</h1>
-  <div id="messages"></div>
-  <div id="errors"></div>
 
-  <!-- Authentication Section -->
-  <div id="authSection">
-    <h2>Login</h2>
-    <label for="loginUsername">Username or Email</label>
-    <input type="text" id="loginUsername" placeholder="Username or Email" />
-    <label for="loginPassword">Password</label>
-    <input type="password" id="loginPassword" placeholder="Password" />
-    <button onclick="login()">Login</button>
-    <p>Don't have an account? <a href="#" onclick="showRegister()">Register here</a></p>
+<h1>Wallet Platform Demo</h1>
+
+<div id="loginSection">
+  <h2>Login</h2>
+  <label>Username:
+    <input type="text" id="loginUsername" />
+  </label>
+  <label>Password:
+    <input type="password" id="loginPassword" />
+  </label>
+  <button id="loginBtn">Login</button>
+  <div id="loginError" class="error"></div>
+</div>
+
+<div id="dashboard" class="hidden">
+  <h2>Welcome, <span id="userFullName"></span> (<span id="userRole"></span>)</h2>
+  <div>
+    <strong>Your Wallet Balance (KES):</strong> <span id="walletBalance"></span>
   </div>
 
-  <!-- Registration Section -->
-  <div id="registerSection" class="hidden">
-    <h2>Register</h2>
-    <label for="surname">Surname</label>
-    <input type="text" id="surname" placeholder="Surname" />
-    <label for="middleName">Middle Name (optional)</label>
-    <input type="text" id="middleName" placeholder="Middle Name" />
-    <label for="firstName">First Name</label>
-    <input type="text" id="firstName" placeholder="First Name" />
-    <label for="idNumber">ID/Passport Number</label>
-    <input type="text" id="idNumber" placeholder="ID or Passport" />
-    <label for="phone">Phone Number</label>
-    <input type="text" id="phone" placeholder="Phone Number" />
-    <label for="email">Email</label>
-    <input type="email" id="email" placeholder="Email Address" />
-    <label for="regPassword">Password</label>
-    <input type="password" id="regPassword" placeholder="Password" />
-    <label for="pin">4-digit PIN</label>
-    <input type="password" id="pin" maxlength="4" placeholder="PIN" />
-    <label for="idUpload">Upload ID</label>
-    <input type="file" id="idUpload" />
-    <label for="selfieUpload">Upload Selfie</label>
-    <input type="file" id="selfieUpload" />
-    <button onclick="initiateOTP()">Register</button>
-  </div>
+  <h3>Transfer Money</h3>
+  <label>Recipient Username:
+    <input type="text" id="recipientUsername" />
+  </label>
+  <label>Amount to Send (KES):
+    <input type="number" id="transferAmount" min="1" />
+  </label>
+  <div>Transaction Charge: <span id="chargeDisplay">0</span> KES (Max 1000 KES)</div>
+  <button id="transferBtn">Send Money</button>
+  <div id="transferMessage"></div>
 
-  <!-- OTP Verification Section -->
-  <div id="otpSection" class="hidden">
-    <h2>Verify OTP</h2>
-    <p>A verification code has been sent to your phone and email.</p>
-    <label for="otpCode">Enter OTP Code</label>
-    <input type="text" id="otpCode" />
-    <button onclick="verifyOTP()">Verify & Complete Registration</button>
-  </div>
+  <button id="logoutBtn" style="margin-top: 2rem;">Logout</button>
+</div>
 
-  <!-- User Dashboard -->
-  <div id="dashboard" class="hidden">
-    <h2>User Dashboard</h2>
-    <div id="kycStatus"></div>
-    <div><strong>Wallet Number:</strong> <span id="walletNumberDisplay"></span></div>
-    <div><strong>Transaction Wallet:</strong> KES <span id="transactionBalance">0</span></div>
-    <div><strong>Trading Wallet:</strong> KES <span id="tradingBalance">0</span></div>
-    <div class="toggle-buttons">
-      <button onclick="toggleCharts()">Toggle Charts</button>
-      <button onclick="toggleTransfer()">Send Money</button>
-      <button onclick="logout()">Logout</button>
-    </div>
-  </div>
+<div id="adminDashboard" class="hidden">
+  <h2>Admin Dashboard</h2>
 
-  <!-- Transfer Section -->
-  <div id="transferSection" class="hidden">
-    <h3>Send Money</h3>
-    <label for="recipientWallet">Recipient Wallet Number</label>
-    <input type="text" id="recipientWallet" placeholder="Wallet Number" />
-    <label for="transferAmount">Amount (KES)</label>
-    <input type="number" id="transferAmount" placeholder="Amount" />
-    <label for="confirmPin">Enter PIN</label>
-    <input type="password" id="confirmPin" maxlength="4" placeholder="PIN" />
-    <button onclick="sendMoney()">Transfer</button>
-  </div>
+  <h3>Registered Users</h3>
+  <table id="usersTable">
+    <thead><tr><th>Username</th><th>Full Name</th><th>Role</th><th>Balance (KES)</th></tr></thead>
+    <tbody></tbody>
+  </table>
 
-  <!-- Chart Section -->
-  <div id="chartsSection" class="hidden">
-    <h3>Your Wallet Analytics</h3>
-    <canvas id="userWalletChart"></canvas>
-  </div>
+  <h3>Transaction Charges Ledger</h3>
+  <table id="chargesLedger">
+    <thead><tr><th>Timestamp</th><th>Sender</th><th>Recipient</th><th>Amount</th><th>Charge</th></tr></thead>
+    <tbody></tbody>
+  </table>
 
-  <!-- Admin Dashboard Placeholder -->
-  <div id="adminDashboard" class="hidden">
-    <h2>Admin Dashboard</h2>
-    <p><strong>Transaction Wallet Total:</strong> KES <span id="adminTransactionWalletTotal"></span></p>
-    <p><strong>Trading Wallet Total:</strong> KES <span id="adminTradingWalletTotal"></span></p>
-    <canvas id="transactionWalletChart"></canvas>
-    <canvas id="tradingWalletChart"></canvas>
-    <button onclick="logout()">Logout</button>
-  </div>
+  <canvas id="chargeGraph" height="300"></canvas>
+
+  <button id="adminLogoutBtn" style="margin-top: 2rem;">Logout</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 (() => {
-  // --- Data Storage ---
-  // Using localStorage to simulate DB for demo purposes
-  const STORAGE_KEY = 'walletPlatformUsers';
-  const STORAGE_OTP_KEY = 'walletPlatformOTP';
+  // Hardcoded users with roles and balances
+  const users = {
+    admin: {
+      username: 'admin',
+      password: 'adminpass',
+      fullName: 'System Administrator',
+      role: 'admin',
+      balance: 0
+    },
+    kilush: {
+      username: 'kilush',
+      password: 'kilush123',
+      fullName: 'Kilush Mutua',
+      role: 'user',
+      balance: 15000
+    },
+    schwadz: {
+      username: 'schwadz',
+      password: 'schwadz123',
+      fullName: 'Schwadz Mwangi',
+      role: 'user',
+      balance: 10000
+    },
+    moses: {
+      username: 'moses',
+      password: 'moses123',
+      fullName: 'Moses Otieno',
+      role: 'sub-admin',
+      balance: 5000
+    }
+  };
 
-  // --- Utility Functions ---
-  function saveUsers(users) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-  }
+  // Transaction charge capped at 1000 KES, 1% charge per transaction
+  const TRANSACTION_CHARGE_RATE = 0.01;
+  const MAX_CHARGE = 1000;
 
-  function loadUsers() {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  }
+  // Transaction history array
+  let transactions = [];
 
-  function generateWalletNumber() {
-    // Simple unique wallet number generator: W + timestamp + random
-    return 'W' + Date.now() + Math.floor(Math.random() * 900 + 100);
-  }
-
-  function showMessage(msg, isError = false) {
-    const el = isError ? document.getElementById('errors') : document.getElementById('messages');
-    el.textContent = msg;
-    if (!isError) document.getElementById('errors').textContent = '';
-  }
-
-  function clearMessages() {
-    document.getElementById('messages').textContent = '';
-    document.getElementById('errors').textContent = '';
-  }
-
-  // --- Auth & Registration ---
+  // Current logged in user
   let currentUser = null;
 
-  function showRegister() {
-    clearMessages();
-    document.getElementById('authSection').classList.add('hidden');
-    document.getElementById('registerSection').classList.remove('hidden');
+  // Elements
+  const loginSection = document.getElementById('loginSection');
+  const loginUsername = document.getElementById('loginUsername');
+  const loginPassword = document.getElementById('loginPassword');
+  const loginBtn = document.getElementById('loginBtn');
+  const loginError = document.getElementById('loginError');
+
+  const dashboard = document.getElementById('dashboard');
+  const userFullName = document.getElementById('userFullName');
+  const userRole = document.getElementById('userRole');
+  const walletBalance = document.getElementById('walletBalance');
+  const recipientUsername = document.getElementById('recipientUsername');
+  const transferAmount = document.getElementById('transferAmount');
+  const chargeDisplay = document.getElementById('chargeDisplay');
+  const transferBtn = document.getElementById('transferBtn');
+  const transferMessage = document.getElementById('transferMessage');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  const adminDashboard = document.getElementById('adminDashboard');
+  const usersTableBody = document.querySelector('#usersTable tbody');
+  const chargesLedgerBody = document.querySelector('#chargesLedger tbody');
+  const adminLogoutBtn = document.getElementById('adminLogoutBtn');
+  const chargeGraphCanvas = document.getElementById('chargeGraph');
+
+  // Calculate charge for an amount
+  function calculateCharge(amount) {
+    const charge = amount * TRANSACTION_CHARGE_RATE;
+    return charge > MAX_CHARGE ? MAX_CHARGE : charge;
   }
 
-  function showLogin() {
-    clearMessages();
-    document.getElementById('authSection').classList.remove('hidden');
-    document.getElementById('registerSection').classList.add('hidden');
-    document.getElementById('otpSection').classList.add('hidden');
-  }
-
-  // --- OTP Generation and Verification (simulated) ---
-  function generateOTP() {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-  }
-
-  function initiateOTP() {
-    clearMessages();
-    // Validate required registration fields
-    const surname = document.getElementById('surname').value.trim();
-    const firstName = document.getElementById('firstName').value.trim();
-    const idNumber = document.getElementById('idNumber').value.trim();
-    const phone = document.getElementById('phone').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('regPassword').value;
-    const pin = document.getElementById('pin').value;
-    const idUpload = document.getElementById('idUpload').files[0];
-    const selfieUpload = document.getElementById('selfieUpload').files[0];
-
-    if (!surname || !firstName || !idNumber || !phone || !email || !password || pin.length !== 4 || !idUpload || !selfieUpload) {
-      showMessage('Please fill in all required fields and upload ID/selfie.', true);
-      return;
-    }
-
-    // Check for existing user with same email or ID
-    let users = loadUsers();
-    if (users.some(u => u.email === email || u.idNumber === idNumber)) {
-      showMessage('User with this email or ID already exists.', true);
-      return;
-    }
-
-    // Store temp reg data in session storage for OTP verification
-    const regData = {
-      surname, firstName, idNumber, phone, email, password, pin,
-      middleName: document.getElementById('middleName').value.trim(),
-      idUploadName: idUpload.name,
-      selfieUploadName: selfieUpload.name,
-      kycStatus: 'Pending',
-      walletNumber: generateWalletNumber(),
-      transactionWallet: 0,
-      tradingWallet: 0,
-      transactionHistory: [],
-      createdAt: new Date().toISOString()
-    };
-
-    // Generate OTP
-    const otp = generateOTP();
-
-    // Save reg data and otp temporarily in sessionStorage for demo
-    sessionStorage.setItem('tempRegData', JSON.stringify(regData));
-    sessionStorage.setItem(STORAGE_OTP_KEY, otp);
-
-    alert(`Simulated OTP sent to phone/email: ${otp}`);
-
-    document.getElementById('registerSection').classList.add('hidden');
-    document.getElementById('otpSection').classList.remove('hidden');
-  }
-
-  function verifyOTP() {
-    const enteredOTP = document.getElementById('otpCode').value.trim();
-    const correctOTP = sessionStorage.getItem(STORAGE_OTP_KEY);
-
-    if (enteredOTP !== correctOTP) {
-      showMessage('Invalid OTP code. Try again.', true);
-      return;
-    }
-
-    // Complete registration
-    const regDataRaw = sessionStorage.getItem('tempRegData');
-    if (!regDataRaw) {
-      showMessage('Registration data not found. Please register again.', true);
-      return;
-    }
-
-    const regData = JSON.parse(regDataRaw);
-    let users = loadUsers();
-
-    // Add user to DB
-    users.push(regData);
-    saveUsers(users);
-
-    // Clear temp data
-    sessionStorage.removeItem('tempRegData');
-    sessionStorage.removeItem(STORAGE_OTP_KEY);
-
-    showMessage('Registration successful. Please login.');
-    document.getElementById('otpSection').classList.add('hidden');
-    showLogin();
-  }
-
-  function login() {
-    clearMessages();
-    const usernameOrEmail = document.getElementById('loginUsername').value.trim();
-    const password = document.getElementById('loginPassword').value;
-
-    if (!usernameOrEmail || !password) {
-      showMessage('Please enter username/email and password.', true);
-      return;
-    }
-
-    let users = loadUsers();
-
-    // Admin hardcoded login
-    if ((usernameOrEmail === 'admin' && password === 'admin123')) {
-      currentUser = { username: 'admin', role: 'admin' };
-      showAdminDashboard();
-      return;
-    }
-
-    // Regular user login
-    let user = users.find(u => (u.email === usernameOrEmail || u.walletNumber === usernameOrEmail) && u.password === password);
-    if (!user) {
-      showMessage('Invalid credentials.', true);
-      return;
-    }
-
-    currentUser = user;
-    showUserDashboard();
-  }
-
-  // --- Show Dashboards ---
-  function showUserDashboard() {
-    clearMessages();
-
-    document.getElementById('authSection').classList.add('hidden');
-    document.getElementById('registerSection').classList.add('hidden');
-    document.getElementById('otpSection').classList.add('hidden');
-    document.getElementById('adminDashboard').classList.add('hidden');
-    document.getElementById('dashboard').classList.remove('hidden');
-    document.getElementById('chartsSection').classList.add('hidden');
-    document.getElementById('transferSection').classList.add('hidden');
-
-    document.getElementById('walletNumberDisplay').textContent = currentUser.walletNumber;
-    document.getElementById('transactionBalance').textContent = currentUser.transactionWallet.toFixed(2);
-    document.getElementById('tradingBalance').textContent = currentUser.tradingWallet.toFixed(2);
-
-    // Show KYC status
-    document.getElementById('kycStatus').innerHTML = `<strong>KYC Status:</strong> ${currentUser.kycStatus}`;
-
-    // Clear charts
-    if (window.userChart) {
-      window.userChart.destroy();
-      window.userChart = null;
-    }
-  }
-
-  function showAdminDashboard() {
-    clearMessages();
-    document.getElementById('authSection').classList.add('hidden');
-    document.getElementById('registerSection').classList.add('hidden');
-    document.getElementById('otpSection').classList.add('hidden');
-    document.getElementById('dashboard').classList.add('hidden');
-    document.getElementById('chartsSection').classList.add('hidden');
-    document.getElementById('transferSection').classList.add('hidden');
-    document.getElementById('adminDashboard').classList.remove('hidden');
-
-    let users = loadUsers();
-    const transactionTotal = users.reduce((acc, u) => acc + (u.transactionWallet || 0), 0);
-    const tradingTotal = users.reduce((acc, u) => acc + (u.tradingWallet || 0), 0);
-
-    document.getElementById('adminTransactionWalletTotal').textContent = transactionTotal.toFixed(2);
-    document.getElementById('adminTradingWalletTotal').textContent = tradingTotal.toFixed(2);
-
-    renderAdminCharts(users);
-  }
-
-  // --- Transfer Money ---
-  function sendMoney() {
-    clearMessages();
-
-    if (!currentUser) {
-      showMessage('No logged in user.', true);
-      return;
-    }
-
-    const recipientWallet = document.getElementById('recipientWallet').value.trim();
-    const amountStr = document.getElementById('transferAmount').value.trim();
-    const pin = document.getElementById('confirmPin').value.trim();
-
-    if (!recipientWallet || !amountStr || !pin) {
-      showMessage('Please fill all transfer fields.', true);
-      return;
-    }
-
-    if (pin !== currentUser.pin) {
-      showMessage('Incorrect PIN.', true);
-      return;
-    }
-
-    let amount = parseFloat(amountStr);
+  // Update charge display when amount changes
+  transferAmount.addEventListener('input', () => {
+    let amount = parseFloat(transferAmount.value);
     if (isNaN(amount) || amount <= 0) {
-      showMessage('Invalid amount.', true);
+      chargeDisplay.textContent = '0';
+    } else {
+      chargeDisplay.textContent = calculateCharge(amount).toFixed(2);
+    }
+  });
+
+  // Login handler
+  loginBtn.addEventListener('click', () => {
+    const username = loginUsername.value.trim().toLowerCase();
+    const password = loginPassword.value;
+
+    loginError.textContent = '';
+    transferMessage.textContent = '';
+
+    if (!users[username]) {
+      loginError.textContent = 'Invalid username or password.';
       return;
     }
-
-    if (amount > currentUser.transactionWallet) {
-      showMessage('Insufficient funds.', true);
+    if (users[username].password !== password) {
+      loginError.textContent = 'Invalid username or password.';
       return;
     }
+    currentUser = users[username];
 
-    if (recipientWallet === currentUser.walletNumber) {
-      showMessage('Cannot transfer to your own wallet.', true);
-      return;
+    // Show dashboard or admin dashboard based on role
+    loginSection.classList.add('hidden');
+    if (currentUser.role === 'admin' || currentUser.role === 'sub-admin') {
+      adminDashboard.classList.remove('hidden');
+      dashboard.classList.add('hidden');
+      renderAdminDashboard();
+    } else {
+      dashboard.classList.remove('hidden');
+      adminDashboard.classList.add('hidden');
+      renderUserDashboard();
     }
+  });
 
-    let users = loadUsers();
-    const recipient = users.find(u => u.walletNumber === recipientWallet);
-
-    if (!recipient) {
-      showMessage('Recipient wallet not found.', true);
-      return;
-    }
-
-    // Perform transfer
-    currentUser.transactionWallet -= amount;
-    recipient.transactionWallet += amount;
-
-    const timestamp = new Date().toISOString();
-
-    // Record transaction history for sender and recipient
-    currentUser.transactionHistory.push({
-      type: 'Sent',
-      amount,
-      to: recipient.walletNumber,
-      date: timestamp,
-    });
-    recipient.transactionHistory.push({
-      type: 'Received',
-      amount,
-      from: currentUser.walletNumber,
-      date: timestamp,
-    });
-
-    // Save updated users
-    const updatedUsers = users.map(u => {
-      if (u.walletNumber === currentUser.walletNumber) return currentUser;
-      if (u.walletNumber === recipient.walletNumber) return recipient;
-      return u;
-    });
-    saveUsers(updatedUsers);
-
-    showMessage(`Transferred KES ${amount.toFixed(2)} to ${recipient.walletNumber} successfully.`);
-    // Update balances shown
-    document.getElementById('transactionBalance').textContent = currentUser.transactionWallet.toFixed(2);
-
-    // Clear transfer inputs
-    document.getElementById('recipientWallet').value = '';
-    document.getElementById('transferAmount').value = '';
-    document.getElementById('confirmPin').value = '';
-
-    // Refresh charts if visible
-    if (!document.getElementById('chartsSection').classList.contains('hidden')) {
-      renderUserChart(currentUser.transactionHistory);
-    }
+  // Render user dashboard info
+  function renderUserDashboard() {
+    userFullName.textContent = currentUser.fullName;
+    userRole.textContent = currentUser.role;
+    walletBalance.textContent = currentUser.balance.toFixed(2);
+    recipientUsername.value = '';
+    transferAmount.value = '';
+    chargeDisplay.textContent = '0';
+    transferMessage.textContent = '';
   }
 
-  // --- Charts & Analytics ---
-  let userChart = null;
-  function renderUserChart(transactionHistory) {
-    if (userChart) {
-      userChart.destroy();
+  // Render admin dashboard info
+  function renderAdminDashboard() {
+    userFullName.textContent = currentUser.fullName;
+    userRole.textContent = currentUser.role;
+
+    // Populate users table
+    usersTableBody.innerHTML = '';
+    Object.values(users).forEach(user => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${user.username}</td>
+        <td>${user.fullName}</td>
+        <td>${user.role}</td>
+        <td>${user.balance.toFixed(2)}</td>
+      `;
+      usersTableBody.appendChild(row);
+    });
+
+    // Populate transaction charges ledger
+    chargesLedgerBody.innerHTML = '';
+    transactions.forEach(tx => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${new Date(tx.timestamp).toLocaleString()}</td>
+        <td>${tx.sender}</td>
+        <td>${tx.recipient}</td>
+        <td>${tx.amount.toFixed(2)}</td>
+        <td>${tx.charge.toFixed(2)}</td>
+      `;
+      chargesLedgerBody.appendChild(row);
+    });
+
+    renderChargeGraph();
+  }
+
+  // Render charge graph by currency (KES only here)
+  function renderChargeGraph() {
+    const ctx = chargeGraphCanvas.getContext('2d');
+    // Sum charges per day for last 30 days
+    const chargesByDay = {};
+
+    const today = new Date();
+    for(let i=29; i>=0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate()-i);
+      const key = d.toISOString().slice(0,10);
+      chargesByDay[key] = 0;
     }
 
-    const sentData = {};
-    const receivedData = {};
-
-    transactionHistory.forEach(tx => {
-      const date = tx.date.split('T')[0]; // YYYY-MM-DD
-      if (tx.type === 'Sent') {
-        sentData[date] = (sentData[date] || 0) + tx.amount;
-      } else if (tx.type === 'Received') {
-        receivedData[date] = (receivedData[date] || 0) + tx.amount;
+    transactions.forEach(tx => {
+      const dateKey = new Date(tx.timestamp).toISOString().slice(0,10);
+      if (chargesByDay.hasOwnProperty(dateKey)) {
+        chargesByDay[dateKey] += tx.charge;
       }
     });
 
-    // Dates sorted
-    const allDates = [...new Set([...Object.keys(sentData), ...Object.keys(receivedData)])].sort();
+    const labels = Object.keys(chargesByDay);
+    const data = Object.values(chargesByDay);
 
-    const sentValues = allDates.map(d => sentData[d] || 0);
-    const receivedValues = allDates.map(d => receivedData[d] || 0);
+    if (window.chargeChart) {
+      window.chargeChart.destroy();
+    }
 
-    const ctx = document.getElementById('userWalletChart').getContext('2d');
-
-    userChart = new Chart(ctx, {
+    window.chargeChart = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: allDates,
-        datasets: [
-          {
-            label: 'Sent (KES)',
-            data: sentValues,
-            borderColor: 'red',
-            fill: false,
-          },
-          {
-            label: 'Received (KES)',
-            data: receivedValues,
-            borderColor: 'green',
-            fill: false,
-          }
-        ]
+        labels,
+        datasets: [{
+          label: 'Transaction Charges (KES)',
+          data,
+          borderColor: 'rgb(75, 192, 192)',
+          tension: 0.3,
+          fill: false,
+        }]
       },
       options: {
-        responsive: true,
         scales: {
+          x: { ticks: { maxRotation: 90, minRotation: 45 } },
           y: { beginAtZero: true }
         }
       }
     });
   }
 
-  // --- Admin Charts ---
-  let adminTransactionChart = null;
-  let adminTradingChart = null;
+  // Transfer button handler
+  transferBtn.addEventListener('click', () => {
+    transferMessage.textContent = '';
+    transferMessage.className = '';
 
-  function renderAdminCharts(users) {
-    const walletNumbers = users.map(u => u.walletNumber);
-    const transactionBalances = users.map(u => u.transactionWallet);
-    const tradingBalances = users.map(u => u.tradingWallet);
+    const recipient = recipientUsername.value.trim().toLowerCase();
+    const amount = parseFloat(transferAmount.value);
 
-    // Transaction Wallet Chart
-    const ctxTx = document.getElementById('transactionWalletChart').getContext('2d');
-    if (adminTransactionChart) adminTransactionChart.destroy();
-    adminTransactionChart = new Chart(ctxTx, {
-      type: 'bar',
-      data: {
-        labels: walletNumbers,
-        datasets: [{
-          label: 'Transaction Wallet (KES)',
-          data: transactionBalances,
-          backgroundColor: 'blue'
-        }]
-      },
-      options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    if (!recipient || !users[recipient]) {
+      transferMessage.textContent = 'Invalid recipient username.';
+      transferMessage.className = 'error';
+      return;
+    }
+    if (recipient === currentUser.username) {
+      transferMessage.textContent = 'You cannot transfer to yourself.';
+      transferMessage.className = 'error';
+      return;
+    }
+    if (isNaN(amount) || amount <= 0) {
+      transferMessage.textContent = 'Enter a valid amount greater than 0.';
+      transferMessage.className = 'error';
+      return;
+    }
+
+    // Calculate charge
+    const charge = calculateCharge(amount);
+
+    // Check sender balance (charge debited separately, sender must have amount + charge)
+    if (currentUser.balance < (amount + charge)) {
+      transferMessage.textContent = `Insufficient balance. You need KES ${(amount + charge).toFixed(2)} including charges.`;
+      transferMessage.className = 'error';
+      return;
+    }
+
+    // Check for duplicate transaction within last 1 minute
+    const now = Date.now();
+    const duplicateTx = transactions.find(tx => 
+      tx.sender === currentUser.username &&
+      tx.recipient === recipient &&
+      tx.amount === amount &&
+      (now - tx.timestamp) < 60000
+    );
+    if (duplicateTx) {
+      transferMessage.textContent = 'Duplicate transaction detected within 1 minute window.';
+      transferMessage.className = 'error';
+      return;
+    }
+
+    // Confirm recipient details (simple prompt)
+    const confirmText = `Send KES ${amount.toFixed(2)} + charge KES ${charge.toFixed(2)} to ${users[recipient].fullName} (${recipient})?`;
+    if (!confirm(confirmText)) {
+      return;
+    }
+
+    // Perform transfer
+    currentUser.balance -= (amount + charge);
+    users[recipient].balance += amount;
+
+    // Log transaction
+    transactions.push({
+      timestamp: now,
+      sender: currentUser.username,
+      recipient,
+      amount,
+      charge
     });
 
-    // Trading Wallet Chart
-    const ctxTr = document.getElementById('tradingWalletChart').getContext('2d');
-    if (adminTradingChart) adminTradingChart.destroy();
-    adminTradingChart = new Chart(ctxTr, {
-      type: 'bar',
-      data: {
-        labels: walletNumbers,
-        datasets: [{
-          label: 'Trading Wallet (KES)',
-          data: tradingBalances,
-          backgroundColor: 'orange'
-        }]
-      },
-      options: { responsive: true, scales: { y: { beginAtZero: true } } }
-    });
-  }
+    transferMessage.textContent = 'Transfer successful!';
+    transferMessage.className = 'success';
 
-  // --- UI Toggles ---
-  function toggleCharts() {
-    const chartsDiv = document.getElementById('chartsSection');
-    if (chartsDiv.classList.contains('hidden')) {
-      chartsDiv.classList.remove('hidden');
-      renderUserChart(currentUser.transactionHistory || []);
-    } else {
-      chartsDiv.classList.add('hidden');
-      if (userChart) {
-        userChart.destroy();
-        userChart = null;
-      }
+    // Update dashboard
+    renderUserDashboard();
+    if (currentUser.role === 'admin' || currentUser.role === 'sub-admin') {
+      renderAdminDashboard();
     }
-  }
+  });
 
-  function toggleTransfer() {
-    const transferDiv = document.getElementById('transferSection');
-    if (transferDiv.classList.contains('hidden')) {
-      transferDiv.classList.remove('hidden');
-    } else {
-      transferDiv.classList.add('hidden');
-    }
-  }
-
-  // --- Logout ---
-  function logout() {
+  // Logout handlers
+  logoutBtn.addEventListener('click', () => {
     currentUser = null;
-    clearMessages();
-    document.getElementById('authSection').classList.remove('hidden');
-    document.getElementById('dashboard').classList.add('hidden');
-    document.getElementById('adminDashboard').classList.add('hidden');
-    document.getElementById('chartsSection').classList.add('hidden');
-    document.getElementById('transferSection').classList.add('hidden');
-  }
+    dashboard.classList.add('hidden');
+    loginSection.classList.remove('hidden');
+    loginUsername.value = '';
+    loginPassword.value = '';
+    loginError.textContent = '';
+    transferMessage.textContent = '';
+  });
 
-  // --- Expose Functions Globally ---
-  window.login = login;
-  window.showRegister = showRegister;
-  window.initiateOTP = initiateOTP;
-  window.verifyOTP = verifyOTP;
-  window.sendMoney = sendMoney;
-  window.toggleCharts = toggleCharts
+  adminLogoutBtn.addEventListener('click', () => {
+    currentUser = null;
+    adminDashboard.classList.add('hidden');
+    loginSection.classList.remove('hidden');
+    loginUsername.value = '';
+    loginPassword.value = '';
+    loginError.textContent = '';
+    transferMessage.textContent = '';
+  });
+})();
+</script>
+
+</body>
+</html>
