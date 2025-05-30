@@ -65,155 +65,111 @@ const hardcodedAdmin = {
   wallets: { transaction: 1000000, trading: 500000 },
   isAdmin: true
 };
+// Save user data
+function saveUser(user) {
+  let users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
+  const existingIndex = users.findIndex(u => u.username === user.username);
+  if (existingIndex > -1) {
+    users[existingIndex] = user;
+  } else {
+    users.push(user);
+  }
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
 
+function login() {
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value.trim();
+  let users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
 
-  function loadUsers() {
-    let users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-    const exists = users.some(u => u.username === hardcodedAdmin.username);
-    if (!exists) {
-      users.push(hardcodedAdmin);
-      localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  if (username === hardcodedAdmin.username && password === hardcodedAdmin.password) {
+    saveUser(hardcodedAdmin);
+    localStorage.setItem(LOGGED_IN_KEY, JSON.stringify(hardcodedAdmin));
+    showAdminDashboard();
+    return;
+  }
+
+  const user = users.find(u =>
+    (u.username === username || u.email === username) && u.password === password
+  );
+
+  if (!user) {
+    showError('Invalid username or password.');
+    return;
+  }
+
+  localStorage.setItem(LOGGED_IN_KEY, JSON.stringify(user));
+  if (user.isAdmin) {
+    showAdminDashboard();
+  } else {
+    showError('Only admin access is enabled for now.');
+  }
+}
+
+function logout() {
+  localStorage.removeItem(LOGGED_IN_KEY);
+  location.reload();
+}
+
+function showError(message) {
+  document.getElementById('errors').textContent = message;
+  document.getElementById('messages').textContent = '';
+}
+
+function showMessage(message) {
+  document.getElementById('messages').textContent = message;
+  document.getElementById('errors').textContent = '';
+}
+
+function showAdminDashboard() {
+  document.getElementById('authSection').classList.add('hidden');
+  document.getElementById('adminDashboard').classList.remove('hidden');
+  renderAdminGraphs();
+}
+
+function renderAdminGraphs() {
+  let users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
+  users = [hardcodedAdmin, ...users.filter(u => u.username !== 'admin')];
+
+  const transactionLabels = users.map(u => u.username);
+  const transactionData = users.map(u => u.wallets.transaction || 0);
+  const tradingData = users.map(u => u.wallets.trading || 0);
+
+  document.getElementById('adminTransactionWalletTotal').textContent = transactionData.reduce((a,b) => a+b, 0).toLocaleString();
+  document.getElementById('adminTradingWalletTotal').textContent = tradingData.reduce((a,b) => a+b, 0).toLocaleString();
+
+  new Chart(document.getElementById('transactionWalletChart'), {
+    type: 'bar',
+    data: {
+      labels: transactionLabels,
+      datasets: [{
+        label: 'Transaction Wallets',
+        backgroundColor: '#4caf50',
+        data: transactionData
+      }]
     }
-    return users;
-  }
+  });
 
-  function saveUsers(users) {
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  }
-
-  function setLoggedInUser(username) {
-    localStorage.setItem(LOGGED_IN_KEY, username);
-  }
-
-  function getLoggedInUser() {
-    return localStorage.getItem(LOGGED_IN_KEY);
-  }
-
-  function clearLoggedInUser() {
-    localStorage.removeItem(LOGGED_IN_KEY);
-  }
-
-  function clearMessages() {
-    document.getElementById('messages').textContent = '';
-    document.getElementById('errors').textContent = '';
-  }
-
-  function showMessage(msg) {
-    document.getElementById('messages').textContent = msg;
-    document.getElementById('errors').textContent = '';
-  }
-
-  function showError(msg) {
-    document.getElementById('errors').textContent = msg;
-    document.getElementById('messages').textContent = '';
-  }
-
-  function findUserByUsernameOrEmail(identifier) {
-    const users = loadUsers();
-    identifier = identifier.toLowerCase();
-    return users.find(u => u.username.toLowerCase() === identifier || u.email.toLowerCase() === identifier);
-  }
-
-  function login() {
-    clearMessages();
-    const input = document.getElementById('loginUsername').value.trim().toLowerCase();
-    const password = document.getElementById('loginPassword').value;
-
-    const users = loadUsers();
-    const user = users.find(u =>
-      u.username.toLowerCase() === input || u.email.toLowerCase() === input
-    );
-
-    if (!user) {
-      showError('User not found.');
-      return;
+  new Chart(document.getElementById('tradingWalletChart'), {
+    type: 'bar',
+    data: {
+      labels: transactionLabels,
+      datasets: [{
+        label: 'Trading Wallets',
+        backgroundColor: '#2196f3',
+        data: tradingData
+      }]
     }
+  });
+}
 
-    if (user.password !== password) {
-      showError('Incorrect password.');
-      return;
-    }
-
-    setLoggedInUser(user.username);
-    showMessage(`Welcome ${user.firstName}!`);
-    renderDashboard();
+// Auto-show admin dashboard if logged in
+window.onload = () => {
+  const user = JSON.parse(localStorage.getItem(LOGGED_IN_KEY));
+  if (user && user.isAdmin) {
+    showAdminDashboard();
   }
-
-  function logout() {
-    clearLoggedInUser();
-    document.getElementById('authSection').classList.remove('hidden');
-    document.getElementById('dashboard').classList.add('hidden');
-    document.getElementById('adminDashboard').classList.add('hidden');
-    clearMessages();
-  }
-
-  function renderDashboard() {
-    const username = getLoggedInUser();
-    if (!username) return;
-
-    const users = loadUsers();
-    const user = users.find(u => u.username === username);
-    if (!user) return;
-
-    document.getElementById('authSection').classList.add('hidden');
-
-    if (user.isAdmin) {
-      document.getElementById('adminDashboard').classList.remove('hidden');
-      document.getElementById('adminTransactionWalletTotal').textContent = user.wallets.transaction;
-      document.getElementById('adminTradingWalletTotal').textContent = user.wallets.trading;
-    } else {
-      document.getElementById('dashboard').classList.remove('hidden');
-      document.getElementById('userFullName').textContent = `${user.surname} ${user.firstName}`;
-      document.getElementById('transactionWalletBalance').textContent = user.wallets.transaction;
-      document.getElementById('tradingWalletBalance').textContent = user.wallets.trading;
-    }
-  }
-
-  function registerUser(event) {
-    event.preventDefault();
-    clearMessages();
-
-    const surname = document.getElementById('regSurname').value.trim();
-    const middle = document.getElementById('regMiddleName').value.trim();
-    const first = document.getElementById('regFirstName').value.trim();
-    const idNum = document.getElementById('regID').value.trim().toLowerCase();
-    const phone = document.getElementById('regPhone').value.trim();
-    const email = document.getElementById('regEmail').value.trim().toLowerCase();
-    const password = document.getElementById('regPassword').value;
-    const pin = document.getElementById('regPIN').value;
-
-    if (!surname || !first || !idNum || !phone || !email || !password || pin.length !== 4) {
-      showError("All required fields must be correctly filled.");
-      return false;
-    }
-
-    const username = idNum;
-    const users = loadUsers();
-    if (users.find(u => u.username === username)) {
-      showError("A user with this ID already exists.");
-      return false;
-    }
-
-    const newUser = {
-      username, email, phone, surname, middleName: middle, firstName: first, idNumber: idNum,
-      password, pin,
-      wallets: { transaction: 0, trading: 0 },
-      isAdmin: false
-    };
-
-    users.push(newUser);
-    saveUsers(users);
-    showMessage("Registration successful. You can now log in.");
-    document.getElementById('registerForm').reset();
-    return false;
-  }
-
-  window.onload = function () {
-    loadUsers(); // ensure admin is added
-    const loggedIn = getLoggedInUser();
-    if (loggedIn) renderDashboard();
-  };
+};
 </script>
-
 </body>
 </html>
