@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Wallet Platform with Admin & KYC</title>
+  <title>Wallet Platform</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f0f2f5; }
     h2 { margin-top: 0; }
@@ -21,12 +21,12 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-
 <h1>Wallet Platform</h1>
 
 <div id="messages"></div>
 <div id="errors"></div>
 
+<!-- Authentication -->
 <div id="authSection">
   <h2>Login</h2>
   <label for="loginUsername">Username or Email</label>
@@ -34,62 +34,38 @@
   <label for="loginPassword">Password</label>
   <input type="password" id="loginPassword" placeholder="Password" />
   <button onclick="login()">Login</button>
-  <hr />
-  <h2>Register New User</h2>
-  <form id="registerForm" onsubmit="return registerUser(event)">
-    <label for="regSurname">Surname *</label>
-    <input type="text" id="regSurname" required />
-    <label for="regMiddleName">Middle Name</label>
-    <input type="text" id="regMiddleName" />
-    <label for="regFirstName">First Name *</label>
-    <input type="text" id="regFirstName" required />
-    <label for="regID">ID / Passport Number *</label>
-    <input type="text" id="regID" required />
-    <label for="regPhone">Phone Number *</label>
-    <input type="tel" id="regPhone" required />
-    <label for="regEmail">Email Address *</label>
-    <input type="email" id="regEmail" required />
-    <label for="regPassword">Password *</label>
-    <input type="password" id="regPassword" required />
-    <label for="regPIN">4-Digit PIN *</label>
-    <input type="password" id="regPIN" maxlength="4" pattern="\\d{4}" required />
-    <button type="submit">Register</button>
-  </form>
 </div>
 
-<div id="dashboard" class="hidden">
-  <h2>User Dashboard</h2>
-  <p>Welcome, <span id="userFullName"></span>!</p>
-  <p><strong>Transaction Wallet Balance:</strong> KES <span id="transactionWalletBalance">0</span></p>
-  <p><strong>Trading Wallet Balance:</strong> KES <span id="tradingWalletBalance">0</span></p>
-  <button onclick="logout()">Logout</button>
-</div>
-
+<!-- Admin Dashboard -->
 <div id="adminDashboard" class="hidden">
   <h2>Admin Dashboard</h2>
   <p>Welcome Admin!</p>
+  <h3>Wallet Balances</h3>
   <p><strong>Transaction Wallet Total:</strong> KES <span id="adminTransactionWalletTotal">0</span></p>
   <p><strong>Trading Wallet Total:</strong> KES <span id="adminTradingWalletTotal">0</span></p>
+  <canvas id="transactionWalletChart"></canvas>
+  <canvas id="tradingWalletChart"></canvas>
   <button onclick="logout()">Logout</button>
 </div>
 
 <script>
-  const USERS_KEY = 'walletUsers';
-  const LOGGED_IN_KEY = 'walletLoggedInUser';
+const USERS_KEY = 'walletUsers';
+const LOGGED_IN_KEY = 'walletLoggedInUser';
 
-  const hardcodedAdmin = {
-    username: 'admin',
-    password: 'Admin@123',
-    email: 'admin@example.com',
-    phone: '0000000000',
-    surname: 'Admin',
-    middleName: '',
-    firstName: 'User',
-    idNumber: 'ADMIN001',
-    pin: '0000',
-    wallets: { transaction: 1000000, trading: 500000 },
-    isAdmin: true
-  };
+const hardcodedAdmin = {
+  username: 'admin',
+  password: 'Admin@123',
+  email: 'admin@example.com',
+  phone: '0000000000',
+  surname: 'Admin',
+  middleName: '',
+  firstName: 'User',
+  idNumber: 'ADMIN001',
+  pin: '0000',
+  wallets: { transaction: 1000000, trading: 500000 },
+  isAdmin: true
+};
+
 
   function loadUsers() {
     let users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
