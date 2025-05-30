@@ -17,6 +17,7 @@
     table { border-collapse: collapse; width: 100%; max-width: 800px; margin-top: 10px; }
     th, td { border: 1px solid #ddd; padding: 8px; }
     th { background: #333; color: white; }
+    #kycList img { max-height: 100px; display: block; margin: 5px 0; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -34,6 +35,33 @@
   <label for="loginPassword">Password</label>
   <input type="password" id="loginPassword" placeholder="Password" />
   <button onclick="login()">Login</button>
+
+  <h2>Register</h2>
+  <form id="registerForm" onsubmit="return registerUser(event)">
+    <label for="regSurname">Surname *</label>
+    <input type="text" id="regSurname" required />
+    <label for="regMiddleName">Middle Name</label>
+    <input type="text" id="regMiddleName" />
+    <label for="regFirstName">First Name *</label>
+    <input type="text" id="regFirstName" required />
+    <label for="regID">ID / Passport Number *</label>
+    <input type="text" id="regID" required />
+    <label for="regPhone">Phone Number *</label>
+    <input type="tel" id="regPhone" required />
+    <label for="regEmail">Email Address *</label>
+    <input type="email" id="regEmail" required />
+    <label for="regPassword">Password *</label>
+    <input type="password" id="regPassword" required />
+    <label for="regPIN">4-Digit PIN *</label>
+    <input type="password" id="regPIN" maxlength="4" pattern="\\d{4}" required />
+
+    <label for="regIDFile">Upload Scanned ID/Passport *</label>
+    <input type="file" id="regIDFile" accept="image/*,.pdf" required />
+    <label for="regSelfieFile">Upload Live Selfie *</label>
+    <input type="file" id="regSelfieFile" accept="image/*" required />
+
+    <button type="submit">Register</button>
+  </form>
 </div>
 
 <!-- Admin Dashboard -->
@@ -45,6 +73,10 @@
   <p><strong>Trading Wallet Total:</strong> KES <span id="adminTradingWalletTotal">0</span></p>
   <canvas id="transactionWalletChart"></canvas>
   <canvas id="tradingWalletChart"></canvas>
+
+  <h3>Registered KYC Documents</h3>
+  <div id="kycList"></div>
+
   <button onclick="logout()">Logout</button>
 </div>
 
@@ -65,7 +97,7 @@ const hardcodedAdmin = {
   wallets: { transaction: 1000000, trading: 500000 },
   isAdmin: true
 };
-// Save user data
+
 function saveUser(user) {
   let users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
   const existingIndex = users.findIndex(u => u.username === user.username);
@@ -77,10 +109,18 @@ function saveUser(user) {
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
 }
 
+function loadUsers() {
+  return JSON.parse(localStorage.getItem(USERS_KEY)) || [];
+}
+
+function saveUsers(users) {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+
 function login() {
   const username = document.getElementById('loginUsername').value.trim();
   const password = document.getElementById('loginPassword').value.trim();
-  let users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
+  let users = loadUsers();
 
   if (username === hardcodedAdmin.username && password === hardcodedAdmin.password) {
     saveUser(hardcodedAdmin);
@@ -125,10 +165,11 @@ function showAdminDashboard() {
   document.getElementById('authSection').classList.add('hidden');
   document.getElementById('adminDashboard').classList.remove('hidden');
   renderAdminGraphs();
+  renderKYCList();
 }
 
 function renderAdminGraphs() {
-  let users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
+  let users = loadUsers();
   users = [hardcodedAdmin, ...users.filter(u => u.username !== 'admin')];
 
   const transactionLabels = users.map(u => u.username);
@@ -160,6 +201,94 @@ function renderAdminGraphs() {
         data: tradingData
       }]
     }
+  });
+}
+
+function generateUsername(idNumber) {
+  return 'user_' + idNumber;
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function registerUser(event) {
+  event.preventDefault();
+  showError('');
+  showMessage('');
+
+  const users = loadUsers();
+
+  const surname = document.getElementById('regSurname').value.trim();
+  const middleName = document.getElementById('regMiddleName').value.trim();
+  const firstName = document.getElementById('regFirstName').value.trim();
+  const idNumber = document.getElementById('regID').value.trim();
+  const phone = document.getElementById('regPhone').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+  const pin = document.getElementById('regPIN').value;
+  const idFile = document.getElementById('regIDFile').files[0];
+  const selfieFile = document.getElementById('regSelfieFile').files[0];
+
+  if (!idFile || !selfieFile) {
+    showError("Please upload both ID and selfie.");
+    return;
+  }
+
+  const username = generateUsername(idNumber);
+
+  if (users.find(u => u.username === username)) {
+    showError("User with this ID already exists.");
+    return;
+  }
+
+  const idBase64 = await fileToBase64(idFile);
+  const selfieBase64 = await fileToBase64(selfieFile);
+
+  const newUser = {
+    username,
+    password,
+    email,
+    phone,
+    surname,
+    middleName,
+    firstName,
+    idNumber,
+    pin,
+    wallets: { transaction: 0, trading: 0 },
+    isAdmin: false,
+    kyc: {
+      idBase64,
+      selfieBase64
+    }
+  };
+
+  users.push(newUser);
+  saveUsers(users);
+  showMessage("Registration successful! You may now log in.");
+  document.getElementById('registerForm').reset();
+}
+
+function renderKYCList() {
+  const users = loadUsers();
+  const kycListDiv = document.getElementById('kycList');
+  kycListDiv.innerHTML = '';
+
+  users.filter(u => !u.isAdmin).forEach(u => {
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <p><strong>${u.surname} ${u.middleName} ${u.firstName}</strong> (${u.username})</p>
+      <p>ID: ${u.idNumber}, Phone: ${u.phone}, Email: ${u.email}</p>
+      <p>ID Document: <a href="${u.kyc.idBase64}" target="_blank">View</a></p>
+      <p>Selfie:<br><img src="${u.kyc.selfieBase64}" alt="Selfie" /></p>
+      <hr />
+    `;
+    kycListDiv.appendChild(div);
   });
 }
 
