@@ -6,6 +6,7 @@
     body { font-family: Arial; margin: 20px; }
     .hidden { display: none; }
     input, select, button { margin: 5px; padding: 6px; }
+    .confirmation { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -49,12 +50,27 @@
       <p><strong>Admin Panel</strong></p>
       <p>Total Charges Collected: <span id="total-charges"></span></p>
       <p>Registered Users: <span id="user-count"></span></p>
+      <h4>Admin Wallet Transfers</h4>
+      <input id="admin-transfer-amount" placeholder="Amount to transfer" type="number" />
+      <select id="admin-transfer-currency">
+        <option value="KES">KES</option>
+        <option value="USD">USD</option>
+        <option value="EUR">EUR</option>
+      </select>
+      <button onclick="transferChargesToTrading()">Transfer Charges to Trading Wallet</button>
     </div>
     <h4>Transfer Funds</h4>
     <input id="recipient" placeholder="Recipient Wallet No" />
     <input id="amount" placeholder="Amount" type="number" />
     <input id="auth-pin" placeholder="PIN" />
-    <button onclick="transferMoney()">Send</button>
+    <button onclick="prepareTransfer()">Send</button>
+    <div id="confirmation-section" class="hidden confirmation">
+      <p>Recipient: <span id="confirm-recipient"></span></p>
+      <p>Amount: <span id="confirm-amount"></span></p>
+      <p>Currency: <span id="confirm-currency"></span></p>
+      <button onclick="confirmTransfer()">Next</button>
+      <button onclick="cancelTransfer()">Edit</button>
+    </div>
     <h4>Transaction History</h4>
     <ul id="history"></ul>
     <button onclick="logout()">Logout</button>
@@ -80,8 +96,9 @@
     }
 
     let currentUser = null;
-    let totalCharges = 0;
+    let totalCharges = { 'KES': 0, 'USD': 0, 'EUR': 0 };
     let transactionLogs = [];
+    let recentTransactions = [];
 
     function showSection(id) {
       document.querySelectorAll('div').forEach(div => div.classList.add('hidden'));
@@ -127,7 +144,7 @@
 
       if (currentUser.role === 'admin') {
         document.getElementById('admin-panel').classList.remove('hidden');
-        document.getElementById('total-charges').textContent = totalCharges.toFixed(2) + ' KES';
+        document.getElementById('total-charges').textContent = Object.entries(totalCharges).map(([cur, amt]) => `${amt.toFixed(2)} ${cur}`).join(', ');
         document.getElementById('user-count').textContent = Object.keys(users).length;
       } else {
         document.getElementById('admin-panel').classList.add('hidden');
@@ -136,8 +153,7 @@
       showSection('dashboard-section');
     }
 
-    function transferMoney() {
-      if (!currentUser) return alert('Please login first');
+    function prepareTransfer() {
       const toWallet = document.getElementById('recipient').value.trim();
       const amount = parseFloat(document.getElementById('amount').value);
       const pin = document.getElementById('auth-pin').value.trim();
@@ -149,12 +165,36 @@
       if (!recipient) return alert('Recipient not found');
       if (recipient.wallet === currentUser.wallet) return alert('Cannot send to self');
 
+      document.getElementById('confirm-recipient').textContent = recipient.wallet;
+      document.getElementById('confirm-amount').textContent = amount.toFixed(2);
+      document.getElementById('confirm-currency').textContent = currentUser.currency;
+      document.getElementById('confirmation-section').classList.remove('hidden');
+    }
+
+    function cancelTransfer() {
+      document.getElementById('confirmation-section').classList.add('hidden');
+    }
+
+    function confirmTransfer() {
+      const toWallet = document.getElementById('recipient').value.trim();
+      const amount = parseFloat(document.getElementById('amount').value);
+      const recipient = Object.values(users).find(u => u.wallet === toWallet);
+
+      const now = Date.now();
+      const duplicate = recentTransactions.find(t =>
+        t.sender === currentUser.wallet &&
+        t.recipient === recipient.wallet &&
+        t.amount === amount &&
+        t.currency === currentUser.currency &&
+        now - t.timestamp < 60000
+      );
+      if (duplicate) return alert('Duplicate transaction detected. Please wait before retrying.');
+
       const charge = amount * 0.01;
       const total = amount + charge;
 
       if (currentUser.balance < total) return alert('Insufficient balance');
 
-      // Handle currency conversion
       let convertedAmount = amount;
       let note = '';
       if (currentUser.currency !== recipient.currency) {
@@ -164,14 +204,8 @@
 
       currentUser.balance -= total;
       recipient.balance += convertedAmount;
-      totalCharges += charge;
+      totalCharges[currentUser.currency] += charge;
 
-      const log = `${currentUser.wallet} sent ${convertedAmount.toFixed(2)} ${recipient.currency} to ${recipient.wallet}${note} (+${charge.toFixed(2)} ${currentUser.currency} fee)`;
-      transactionLogs.push(log);
-
-      alert('Transfer successful');
-      showDashboard(Object.keys(users).find(u => users[u] === currentUser));
-    }
-  </script>
-</body>
-</html>
+      const log = `${currentUser.wallet} sent ${convertedAmount.toFixed(2)} ${recipient.currency} to ${recipient.wallet}${note} (+${
+::contentReference[oaicite:5]{index=5}
+ 
