@@ -483,7 +483,71 @@
     }
 
     currentUser = user;
-    loadDashboard();
-  });
+function loadDashboard() {
+  clearErrors();
+  hideAllSections();
+
+  if (!currentUser) return;
+
+  if (currentUser.role === 'admin') {
+    $('adminPanel').classList.remove('hidden');
+
+    // Show admin data
+    $('userCount').textContent = Object.keys(users).length;
+    let txCount = 0;
+    for (let u in users) {
+      txCount += users[u].transactions.length;
+    }
+    $('transactionCount').textContent = txCount;
+
+  } else {
+    $('dashboard').classList.remove('hidden');
+    $('userName').textContent = `${currentUser.surname} ${currentUser.firstName}`;
+    $('walletNumber').textContent = currentUser.walletNumber;
+    $('walletBalance').textContent = `${currentUser.balance} KES`;
+    loadTransactionHistory();
+  }
+}
+
+// Fix login detection
+$('loginForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  clearErrors();
+
+  const usernameInput = $('loginUsername').value.trim();
+  const passwordInput = $('loginPassword').value;
+
+  if (!usernameInput || !passwordInput) {
+    $('loginError').textContent = 'Please enter username and password.';
+    return;
+  }
+
+  let user = null;
+
+  // Try username match (direct)
+  if (users[usernameInput]) {
+    user = users[usernameInput];
+  } else {
+    // Try login by wallet number
+    user = Object.values(users).find(u =>
+      u.walletNumber === usernameInput ||
+      u.idNumber === usernameInput || // Allow ID as username
+      u.email.toLowerCase() === usernameInput.toLowerCase()
+    );
+  }
+
+  if (!user) {
+    $('loginError').textContent = 'User not found.';
+    return;
+  }
+
+  if (user.password !== passwordInput) {
+    $('loginError').textContent = 'Incorrect password.';
+    return;
+  }
+
+  currentUser = user;
+  loadDashboard();
+});
 
   // Load
