@@ -6,7 +6,8 @@
     body { font-family: Arial; margin: 20px; }
     .hidden { display: none; }
     input, select, button { margin: 5px; padding: 6px; }
-    .confirmation { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
+    #confirmation-section { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
+    canvas { max-width: 400px; margin: 10px; }
   </style>
 </head>
 <body>
@@ -46,39 +47,69 @@
     <p>Welcome, <span id="user-name"></span></p>
     <p>Wallet: <span id="wallet-number"></span></p>
     <p>Balance: <span id="wallet-balance"></span></p>
+
     <div id="admin-panel" class="hidden">
       <p><strong>Admin Panel</strong></p>
-      <p>Total Charges Collected: <span id="total-charges"></span></p>
+      <p>Total Charges Collected:</p>
+      <ul id="charges-list"></ul>
       <p>Registered Users: <span id="user-count"></span></p>
-      <h4>Admin Wallet Transfers</h4>
-      <input id="admin-transfer-amount" placeholder="Amount to transfer" type="number" />
-      <select id="admin-transfer-currency">
-        <option value="KES">KES</option>
-        <option value="USD">USD</option>
-        <option value="EUR">EUR</option>
-      </select>
-      <button onclick="transferChargesToTrading()">Transfer Charges to Trading Wallet</button>
+      <button onclick="showSection('subadmin-section')">Manage Sub-Admins</button>
+      <button onclick="showSection('transfer-charges-section')">Transfer Charges to Trading Wallet</button>
+      <div>
+        <canvas id="transactionsChart"></canvas>
+        <canvas id="balancesChart"></canvas>
+      </div>
     </div>
+
     <h4>Transfer Funds</h4>
     <input id="recipient" placeholder="Recipient Wallet No" />
     <input id="amount" placeholder="Amount" type="number" />
     <input id="auth-pin" placeholder="PIN" />
-    <button onclick="prepareTransfer()">Send</button>
-    <div id="confirmation-section" class="hidden confirmation">
+    <button onclick="prepareTransfer()">Next</button>
+
+    <div id="confirmation-section" class="hidden">
       <p>Recipient: <span id="confirm-recipient"></span></p>
       <p>Amount: <span id="confirm-amount"></span></p>
-      <p>Currency: <span id="confirm-currency"></span></p>
-      <button onclick="confirmTransfer()">Next</button>
+      <button onclick="confirmTransfer()">Confirm</button>
       <button onclick="cancelTransfer()">Edit</button>
     </div>
+
     <h4>Transaction History</h4>
     <ul id="history"></ul>
     <button onclick="logout()">Logout</button>
   </div>
 
+  <div id="subadmin-section" class="hidden">
+    <h3>Manage Sub-Admins</h3>
+    <input id="subadmin-username" placeholder="Username" />
+    <input id="subadmin-password" type="password" placeholder="Password" />
+    <input id="subadmin-email" placeholder="Email" />
+    <input id="subadmin-pin" placeholder="PIN (4 digits)" />
+    <select id="subadmin-permissions" multiple>
+      <option value="logs">Logs</option>
+      <option value="graphs">Graphs</option>
+      <option value="user-data">User Data</option>
+    </select><br>
+    <button onclick="createSubAdmin()">Create Sub-Admin</button>
+    <button onclick="showSection('dashboard-section')">Back</button>
+  </div>
+
+  <div id="transfer-charges-section" class="hidden">
+    <h3>Transfer Charges to Trading Wallet</h3>
+    <select id="transfer-currency">
+      <option value="KES">KES</option>
+      <option value="USD">USD</option>
+      <option value="EUR">EUR</option>
+    </select>
+    <input id="transfer-amount" placeholder="Amount" type="number" />
+    <button onclick="transferCharges()">Transfer</button>
+    <button onclick="showSection('dashboard-section')">Back</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     let users = {
-      'admin': { password: 'admin123', email: 'admin@wallet.com', pin: '0000', wallet: 'ADM001', balance: 100000, role: 'admin', currency: 'KES' },
+      'admin': { password: 'admin123', email: 'admin@wallet.com', pin: '0000', wallet: 'ADM001', balance: 100000, role: 'admin', currency: 'KES', permissions: [] },
       'schwadz': { password: 'pass123', email: 'schwadz@wallet.com', pin: '1234', wallet: 'WAL001', balance: 5000, role: 'user', currency: 'USD' },
       'kilush': { password: 'pass456', email: 'kilush@wallet.com', pin: '2345', wallet: 'WAL002', balance: 7000, role: 'user', currency: 'KES' },
       'moses': { password: 'mosespass', email: 'moses@wallet.com', pin: '3456', wallet: 'WAL003', balance: 9000, role: 'user', currency: 'EUR' }
@@ -98,7 +129,7 @@
     let currentUser = null;
     let totalCharges = { 'KES': 0, 'USD': 0, 'EUR': 0 };
     let transactionLogs = [];
-    let recentTransactions = [];
+    let lastTransactions = [];
 
     function showSection(id) {
       document.querySelectorAll('div').forEach(div => div.classList.add('hidden'));
@@ -144,13 +175,24 @@
 
       if (currentUser.role === 'admin') {
         document.getElementById('admin-panel').classList.remove('hidden');
-        document.getElementById('total-charges').textContent = Object.entries(totalCharges).map(([cur, amt]) => `${amt.toFixed(2)} ${cur}`).join(', ');
+        updateChargesList();
         document.getElementById('user-count').textContent = Object.keys(users).length;
+        renderCharts();
       } else {
         document.getElementById('admin-panel').classList.add('hidden');
       }
 
       showSection('dashboard-section');
+    }
+
+    function updateChargesList() {
+      const chargesList = document.getElementById('charges-list');
+      chargesList.innerHTML = '';
+      for (let currency in totalCharges) {
+        const li = document.createElement('li');
+        li.textContent = `${currency}: ${totalCharges[currency].toFixed(2)}`;
+        chargesList.appendChild(li);
+      }
     }
 
     function prepareTransfer() {
@@ -159,53 +201,6 @@
       const pin = document.getElementById('auth-pin').value.trim();
 
       if (pin !== currentUser.pin) return alert('Wrong PIN');
-      if (amount <= 0 || isNaN(amount)) return alert('Invalid amount');
-
-      const recipient = Object.values(users).find(u => u.wallet === toWallet);
-      if (!recipient) return alert('Recipient not found');
-      if (recipient.wallet === currentUser.wallet) return alert('Cannot send to self');
-
-      document.getElementById('confirm-recipient').textContent = recipient.wallet;
-      document.getElementById('confirm-amount').textContent = amount.toFixed(2);
-      document.getElementById('confirm-currency').textContent = currentUser.currency;
-      document.getElementById('confirmation-section').classList.remove('hidden');
-    }
-
-    function cancelTransfer() {
-      document.getElementById('confirmation-section').classList.add('hidden');
-    }
-
-    function confirmTransfer() {
-      const toWallet = document.getElementById('recipient').value.trim();
-      const amount = parseFloat(document.getElementById('amount').value);
-      const recipient = Object.values(users).find(u => u.wallet === toWallet);
-
-      const now = Date.now();
-      const duplicate = recentTransactions.find(t =>
-        t.sender === currentUser.wallet &&
-        t.recipient === recipient.wallet &&
-        t.amount === amount &&
-        t.currency === currentUser.currency &&
-        now - t.timestamp < 60000
-      );
-      if (duplicate) return alert('Duplicate transaction detected. Please wait before retrying.');
-
-      const charge = amount * 0.01;
-      const total = amount + charge;
-
-      if (currentUser.balance < total) return alert('Insufficient balance');
-
-      let convertedAmount = amount;
-      let note = '';
-      if (currentUser.currency !== recipient.currency) {
-        convertedAmount = convertCurrency(amount, currentUser.currency, recipient.currency);
-        note = ` (converted from ${amount.toFixed(2)} ${currentUser.currency} to ${convertedAmount.toFixed(2)} ${recipient.currency})`;
-      }
-
-      currentUser.balance -= total;
-      recipient.balance += convertedAmount;
-      totalCharges[currentUser.currency] += charge;
-
-      const log = `${currentUser.wallet} sent ${convertedAmount.toFixed(2)} ${recipient.currency} to ${recipient.wallet}${note} (+${
+      if (amount <= 0 || isNaN(amount)) return alert('Invalid amount
 ::contentReference[oaicite:5]{index=5}
  
