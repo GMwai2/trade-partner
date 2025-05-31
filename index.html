@@ -1,554 +1,155 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Fintech Wallet Platform - Full KYC & Transactions</title>
-<style>
-  body { font-family: Arial, sans-serif; background: #f5f7fa; margin: 0; padding: 0; }
-  header { background: #004080; color: white; padding: 1rem; text-align: center; }
-  main { max-width: 900px; margin: 1rem auto; background: white; padding: 1rem 2rem; border-radius: 6px; box-shadow: 0 0 10px rgba(0,0,0,0.1);}
-  h2 { color: #004080; }
-  form > div { margin-bottom: 1rem; }
-  label { display: block; font-weight: bold; margin-bottom: 0.3rem; }
-  input[type=text], input[type=email], input[type=tel], input[type=password], input[type=file], select {
-    width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;
-  }
-  button { background: #004080; color: white; border: none; padding: 0.7rem 1.2rem; cursor: pointer; border-radius: 4px; }
-  button:hover { background: #003366; }
-  .error { color: red; margin-top: -0.5rem; margin-bottom: 0.5rem; }
-  .hidden { display: none; }
-  #dashboard, #adminPanel { margin-top: 2rem; }
-  #transactionHistory { max-height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 0.5rem; border-radius: 4px; background: #f9f9f9; }
-  table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
-  th, td { border: 1px solid #ccc; padding: 0.3rem 0.5rem; text-align: left; font-size: 0.9rem; }
-  th { background: #e6f0ff; }
-  #logoutBtn { float: right; background: #cc0000; }
-  #logoutBtn:hover { background: #990000; }
-  small { color: #666; }
-  .otp-section { margin-top: 1rem; padding: 0.8rem; background: #eef5ff; border-radius: 4px; }
-  .file-preview { margin-top: 0.5rem; font-size: 0.85rem; color: #333; }
-  #startSection { text-align: center; margin-top: 3rem; }
-  #startSection button { margin: 0 1rem; min-width: 120px; font-size: 1.2rem; }
-  .show-password-container { margin-top: -0.7rem; margin-bottom: 1rem; font-size: 0.9rem; }
-</style>
+    <title>Wallet Platform</title>
+    <style>
+        body { font-family: Arial; margin: 40px; background: #f2f2f2; }
+        #login, #dashboard { max-width: 500px; margin: auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 0 10px #aaa; }
+        input, button { width: 100%; padding: 10px; margin: 8px 0; }
+        .hidden { display: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+    </style>
 </head>
 <body>
-<header>
-  <h1>Fintech Wallet Platform</h1>
-</header>
-<main>
 
-  <!-- START PAGE -->
-  <section id="startSection">
-    <button id="showLoginBtn">Login</button>
-    <button id="showRegisterBtn">Register</button>
-  </section>
-
-  <!-- REGISTER -->
-  <section id="registerSection" class="hidden">
-    <h2>Register New Account</h2>
-    <form id="registerForm" enctype="multipart/form-data" autocomplete="off" novalidate>
-      <div>
-        <label for="surname">Surname *</label>
-        <input type="text" id="surname" required />
-      </div>
-      <div>
-        <label for="middleName">Middle Name (optional)</label>
-        <input type="text" id="middleName" />
-      </div>
-      <div>
-        <label for="firstName">First Name *</label>
-        <input type="text" id="firstName" required />
-      </div>
-      <div>
-        <label for="idNumber">ID / Passport Number *</label>
-        <input type="text" id="idNumber" required pattern=".{6,}" title="Minimum 6 characters" />
-      </div>
-      <div>
-        <label for="phone">Phone Number (for SMS OTP) *</label>
-        <input type="tel" id="phone" required pattern="^\+?\d{7,15}$" placeholder="+1234567890" />
-      </div>
-      <div>
-        <label for="email">Email Address *</label>
-        <input type="email" id="email" required />
-      </div>
-      <div>
-        <label for="password">Password *</label>
-        <input type="password" id="password" required minlength="6" />
-        <div class="show-password-container">
-          <input type="checkbox" id="showRegisterPassword" />
-          <label for="showRegisterPassword">Show Password</label>
-        </div>
-      </div>
-      <div>
-        <label for="pin">4-Digit PIN *</label>
-        <input type="password" id="pin" required pattern="\d{4}" title="Exactly 4 digits" maxlength="4" />
-      </div>
-      <div>
-        <label for="selfieUpload">Upload Live Selfie *</label>
-        <input type="file" id="selfieUpload" accept="image/*" required />
-        <div id="selfiePreview" class="file-preview"></div>
-      </div>
-      <div>
-        <label for="idUpload">Upload ID/Passport Scan *</label>
-        <input type="file" id="idUpload" accept="image/*,application/pdf" required />
-        <div id="idPreview" class="file-preview"></div>
-      </div>
-      <div>
-        <button type="submit">Register</button>
-      </div>
-      <div id="registerError" class="error"></div>
-    </form>
-  </section>
-
-  <!-- OTP Verification -->
-  <section id="otpSection" class="hidden">
-    <h2>OTP Verification</h2>
-    <p>We have sent OTP codes to your phone and email. (Simulation)</p>
-    <div class="otp-section">
-      <label for="otpPhone">Enter OTP from SMS *</label>
-      <input type="text" id="otpPhone" maxlength="6" pattern="\d{6}" required />
-    </div>
-    <div class="otp-section">
-      <label for="otpEmail">Enter OTP from Email *</label>
-      <input type="text" id="otpEmail" maxlength="6" pattern="\d{6}" required />
-    </div>
-    <div>
-      <button id="verifyOtpBtn">Verify OTP</button>
-    </div>
-    <div id="otpError" class="error"></div>
-  </section>
-
-  <!-- LOGIN -->
-  <section id="loginSection" class="hidden">
+<div id="login">
     <h2>Login</h2>
-    <form id="loginForm" autocomplete="off" novalidate>
-      <div>
-        <label for="loginUsername">Username (Wallet Number or ID Number)</label>
-        <input type="text" id="loginUsername" required />
-      </div>
-      <div>
-        <label for="loginPassword">Password</label>
-        <input type="password" id="loginPassword" required />
-        <div class="show-password-container">
-          <input type="checkbox" id="showLoginPassword" />
-          <label for="showLoginPassword">Show Password</label>
-        </div>
-      </div>
-      <div>
-        <button type="submit">Login</button>
-      </div>
-      <div id="loginError" class="error"></div>
-    </form>
-  </section>
+    <input type="text" id="username" placeholder="Username" />
+    <input type="password" id="password" placeholder="Password" />
+    <button onclick="login()">Login</button>
+    <p id="login-error" style="color:red;"></p>
+</div>
 
-  <!-- DASHBOARD -->
-  <section id="dashboard" class="hidden">
-    <h2>Welcome, <span id="userFullName"></span></h2>
-    <button id="logoutBtn">Logout</button>
-
-    <p><strong>Wallet Number:</strong> <span id="walletNumber"></span></p>
-    <p><strong>Balance:</strong> KES <span id="walletBalance"></span></p>
+<div id="dashboard" class="hidden">
+    <h2>Welcome, <span id="userDisplay"></span></h2>
+    <p><b>Wallet No:</b> <span id="walletNumber"></span></p>
+    <p><b>Balance:</b> KES <span id="balance"></span></p>
 
     <h3>Send Money</h3>
-    <form id="sendMoneyForm" autocomplete="off" novalidate>
-      <div>
-        <label for="recipientWallet">Recipient Wallet Number *</label>
-        <input type="text" id="recipientWallet" required />
-      </div>
-      <div>
-        <label>Recipient Name</label>
-        <input type="text" id="recipientName" disabled />
-      </div>
-      <div>
-        <label for="sendAmount">Amount to Send (KES) *</label>
-        <input type="number" id="sendAmount" min="1" required />
-      </div>
-      <div>
-        <label for="authPin">Enter your 4-digit PIN *</label>
-        <input type="password" id="authPin" maxlength="4" pattern="\d{4}" required />
-        <div class="show-password-container">
-          <input type="checkbox" id="showAuthPin" />
-          <label for="showAuthPin">Show PIN</label>
-        </div>
-      </div>
-      <div>
-        <button type="submit">Send Money</button>
-      </div>
-      <div id="sendMoneyError" class="error"></div>
-      <div id="sendMoneySuccess" style="color: green;"></div>
-    </form>
+    <input type="text" id="recipientWallet" placeholder="Recipient Wallet No" />
+    <input type="number" id="amount" placeholder="Amount" />
+    <input type="password" id="pin" placeholder="Enter PIN" />
+    <button onclick="transfer()">Send</button>
+    <p id="transfer-msg" style="color:green;"></p>
 
     <h3>Transaction History</h3>
-    <div id="transactionHistory">
-      <table>
+    <table>
         <thead>
-          <tr>
-            <th>Date/Time</th>
-            <th>Type</th>
-            <th>Amount</th>
-            <th>From</th>
-            <th>To</th>
-          </tr>
+            <tr><th>To</th><th>Amount</th><th>Charge</th><th>Time</th></tr>
         </thead>
-        <tbody id="transactionLog"></tbody>
-      </table>
-    </div>
-  </section>
+        <tbody id="txnTable"></tbody>
+    </table>
 
-  <!-- ADMIN PANEL -->
-  <section id="adminPanel" class="hidden">
-    <h2>Admin Panel</h2>
-    <button id="adminLogoutBtn">Logout</button>
-    <p>Total Registered Users: <span id="userCount"></span></p>
-    <p>Total Transactions: <span id="transactionCount"></span></p>
-    <!-- Add admin graphs and reports here -->
-  </section>
-</main>
+    <br />
+    <button onclick="logout()">Logout</button>
+</div>
 
 <script>
-(() => {
-  'use strict';
-
-  // Utilities
-  const $ = (id) => document.getElementById(id);
-
-  // Show/hide password toggle helper
-  function togglePassword(checkboxId, inputId) {
-    const checkbox = $(checkboxId);
-    const input = $(inputId);
-    checkbox.addEventListener('change', () => {
-      input.type = checkbox.checked ? 'text' : 'password';
-    });
-  }
-
-  // Hide all main sections except start page
-  const sections = ['startSection', 'registerSection', 'loginSection', 'dashboard', 'adminPanel', 'otpSection'];
-  function hideAllSections() {
-    sections.forEach(id => {
-      $(id).classList.add('hidden');
-    });
-  }
-
-  // Initial state: show start page only
-  hideAllSections();
-  $('startSection').classList.remove('hidden');
-
-  // Show password toggles
-  togglePassword('showRegisterPassword', 'password');
-  togglePassword('showLoginPassword', 'loginPassword');
-  togglePassword('showAuthPin', 'authPin');
-
-  // Show Login or Register forms from Start page
-  $('showLoginBtn').addEventListener('click', () => {
-    hideAllSections();
-    $('loginSection').classList.remove('hidden');
-  });
-  $('showRegisterBtn').addEventListener('click', () => {
-    hideAllSections();
-    $('registerSection').classList.remove('hidden');
-  });
-
-  // Data storage (simulate DB)
-  let users = {
-    // username: userData
-    // walletNumber assigned automatically on registration
-    'admin': {
-      surname: 'Admin',
-      middleName: '',
-      firstName: 'User',
-      idNumber: '0000',
-      phone: '+0000000000',
-      email: 'admin@example.com',
-      password: 'adminpass',
-      pin: '1234',
-      walletNumber: '1000000000',
-      balance: 1000000,
-      role: 'admin',
-      selfieFileName: '',
-      idFileName: '',
-      transactions: []
-    },
-    'kilush': {
-      surname: 'Kilush',
-      middleName: 'M.',
-      firstName: 'User',
-      idNumber: '123456',
-      phone: '+254700000000',
-      email: 'kilush@example.com',
-      password: 'kilushpass',
-      pin: '1111',
-      walletNumber: '1000000001',
-      balance: 10000,
-      role: 'user',
-      selfieFileName: '',
-      idFileName: '',
-      transactions: []
-    },
-    'schwadz': {
-      surname: 'Schwadz',
-      middleName: 'T.',
-      firstName: 'User',
-      idNumber: '654321',
-      phone: '+254700000001',
-      email: 'schwadz@example.com',
-      password: 'schwadzpass',
-      pin: '2222',
-      walletNumber: '1000000002',
-      balance: 15000,
-      role: 'user',
-      selfieFileName: '',
-      idFileName: '',
-      transactions: []
-    }
-  };
-
-  // Helpers to generate wallet number
-  function generateWalletNumber() {
-    // Generate wallet number starting at 1000000003 incrementally
-    let max = 1000000000;
-    for (let user in users) {
-      const w = Number(users[user].walletNumber);
-      if (w > max) max = w;
-    }
-    return (max + 1).toString();
-  }
-
-  // Current logged in user
-  let currentUser = null;
-  let pendingRegistrationData = null; // temporarily store reg data before OTP
-
-  // Clear form errors
-  function clearErrors() {
-    ['registerError', 'loginError', 'otpError', 'sendMoneyError', 'sendMoneySuccess'].forEach(id => {
-      $(id).textContent = '';
-    });
-  }
-
-  // Validate phone number (basic)
-  function validPhone(phone) {
-    return /^\+?\d{7,15}$/.test(phone);
-  }
-
-  // Validate email (basic)
-  function validEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  }
-
-  // Register form submit
-  $('registerForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    clearErrors();
-
-    // Gather inputs
-    const surname = $('surname').value.trim();
-    const middleName = $('middleName').value.trim();
-    const firstName = $('firstName').value.trim();
-    const idNumber = $('idNumber').value.trim();
-    const phone = $('phone').value.trim();
-    const email = $('email').value.trim();
-    const password = $('password').value;
-    const pin = $('pin').value;
-    const selfieFile = $('selfieUpload').files[0];
-    const idFile = $('idUpload').files[0];
-
-    // Basic validations
-    if (!surname || !firstName || !idNumber || !phone || !email || !password || !pin || !selfieFile || !idFile) {
-      $('registerError').textContent = 'Please fill in all required fields and upload required documents.';
-      return;
-    }
-    if (!validPhone(phone)) {
-      $('registerError').textContent = 'Phone number format invalid.';
-      return;
-    }
-    if (!validEmail(email)) {
-      $('registerError').textContent = 'Email format invalid.';
-      return;
-    }
-    if (password.length < 6) {
-      $('registerError').textContent = 'Password must be at least 6 characters.';
-      return;
-    }
-    if (!/^\d{4}$/.test(pin)) {
-      $('registerError').textContent = 'PIN must be exactly 4 digits.';
-      return;
-    }
-
-    // Check ID or email uniqueness
-    for (let user in users) {
-      if (users[user].idNumber === idNumber) {
-        $('registerError').textContent = 'ID/Passport number already registered.';
-        return;
-      }
-      if (users[user].email.toLowerCase() === email.toLowerCase()) {
-        $('registerError').textContent = 'Email already registered.';
-        return;
-      }
-      if (users[user].phone === phone) {
-        $('registerError').textContent = 'Phone number already registered.';
-        return;
-      }
-    }
-
-    // Save pending registration data for OTP verification
-    pendingRegistrationData = {
-      surname, middleName, firstName, idNumber, phone, email,
-      password, pin,
-      selfieFileName: selfieFile.name,
-      idFileName: idFile.name
+    const users = {
+        schwadz: { password: "pass123", pin: "1111", balance: 10000, wallet: "WLT001" },
+        kilush: { password: "pass456", pin: "2222", balance: 8000, wallet: "WLT002" },
+        admin: { password: "admin123", pin: "0000", balance: 15000, wallet: "ADMIN001" }
     };
 
-    // Simulate sending OTP (would be real SMS/email)
-    alert(`Simulated: OTP sent to ${phone} and ${email}. Use '123456' as OTP for both.`);
+    let currentUser = null;
+    let lastTx = null;
 
-    // Show OTP section
-    hideAllSections();
-    $('otpSection').classList.remove('hidden');
-  });
+    function login() {
+        const u = document.getElementById("username").value.trim().toLowerCase();
+        const p = document.getElementById("password").value.trim();
+        const err = document.getElementById("login-error");
 
-  // OTP verification
-  $('verifyOtpBtn').addEventListener('click', () => {
-    clearErrors();
-    const otpPhone = $('otpPhone').value.trim();
-    const otpEmail = $('otpEmail').value.trim();
-
-    if (otpPhone !== '123456' || otpEmail !== '123456') {
-      $('otpError').textContent = 'Invalid OTP codes.';
-      return;
+        if (users[u] && users[u].password === p) {
+            currentUser = u;
+            document.getElementById("login").classList.add("hidden");
+            document.getElementById("dashboard").classList.remove("hidden");
+            document.getElementById("userDisplay").textContent = u;
+            document.getElementById("walletNumber").textContent = users[u].wallet;
+            updateBalance();
+            loadTransactions();
+        } else {
+            err.textContent = "Invalid credentials";
+        }
     }
 
-    if (!pendingRegistrationData) {
-      $('otpError').textContent = 'No pending registration found.';
-      return;
+    function updateBalance() {
+        document.getElementById("balance").textContent = users[currentUser].balance;
     }
 
-    // Create username from idNumber (simple)
-    const username = pendingRegistrationData.idNumber;
-
-    // Generate wallet number
-    const walletNumber = generateWalletNumber();
-
-    // Save user
-    users[username] = {
-      ...pendingRegistrationData,
-      walletNumber,
-      balance: 0,
-      role: 'user',
-      transactions: []
-    };
-
-    alert(`Registration complete! Your wallet number is ${walletNumber}.\nUse it to login.`);
-
-    pendingRegistrationData = null;
-
-    // Show login form
-    hideAllSections();
-    $('loginSection').classList.remove('hidden');
-
-    // Clear registration form inputs
-    $('registerForm').reset();
-  });
-
-  // Login form submit
-  $('loginForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    clearErrors();
-
-    const usernameInput = $('loginUsername').value.trim();
-    const passwordInput = $('loginPassword').value;
-
-    if (!usernameInput || !passwordInput) {
-      $('loginError').textContent = 'Please enter username and password.';
-      return;
+    function logout() {
+        currentUser = null;
+        document.getElementById("dashboard").classList.add("hidden");
+        document.getElementById("login").classList.remove("hidden");
+        document.getElementById("username").value = "";
+        document.getElementById("password").value = "";
+        document.getElementById("login-error").textContent = "";
     }
 
-    // Allow login by username or wallet number
-    let user = null;
-    if (users[usernameInput]) {
-      user = users[usernameInput];
-    } else {
-      // Check wallet number match
-      user = Object.values(users).find(u => u.walletNumber === usernameInput);
+    function transfer() {
+        const recipientWallet = document.getElementById("recipientWallet").value.trim().toUpperCase();
+        const amount = parseFloat(document.getElementById("amount").value.trim());
+        const pin = document.getElementById("pin").value.trim();
+        const msg = document.getElementById("transfer-msg");
+        msg.textContent = "";
+
+        if (!recipientWallet || isNaN(amount) || amount <= 0 || !pin) {
+            msg.style.color = "red"; msg.textContent = "All fields are required and valid.";
+            return;
+        }
+
+        if (users[currentUser].pin !== pin) {
+            msg.style.color = "red"; msg.textContent = "Incorrect PIN.";
+            return;
+        }
+
+        const charge = Math.min(amount * 0.02, 1000);
+        const total = amount + charge;
+
+        if (users[currentUser].balance < total) {
+            msg.style.color = "red"; msg.textContent = "Insufficient funds including charges.";
+            return;
+        }
+
+        const now = Date.now();
+        if (lastTx && now - lastTx.time < 60000 && lastTx.to === recipientWallet && lastTx.amount === amount) {
+            msg.style.color = "red"; msg.textContent = "Duplicate transaction blocked (try after 1 minute).";
+            return;
+        }
+
+        let recipient = Object.keys(users).find(u => users[u].wallet === recipientWallet);
+        if (!recipient) {
+            msg.style.color = "red"; msg.textContent = "Recipient wallet not found.";
+            return;
+        }
+
+        users[currentUser].balance -= total;
+        users[recipient].balance += amount;
+        updateBalance();
+
+        const txn = { to: recipientWallet, amount, charge, time: new Date().toLocaleTimeString() };
+        let txns = JSON.parse(localStorage.getItem(currentUser + "_txns") || "[]");
+        txns.push(txn);
+        localStorage.setItem(currentUser + "_txns", JSON.stringify(txns));
+        lastTx = { ...txn, time: now };
+
+        document.getElementById("recipientWallet").value = "";
+        document.getElementById("amount").value = "";
+        document.getElementById("pin").value = "";
+
+        msg.style.color = "green"; msg.textContent = "Transfer successful!";
+        loadTransactions();
     }
 
-    if (!user) {
-      $('loginError').textContent = 'User not found.';
-      return;
+    function loadTransactions() {
+        const txns = JSON.parse(localStorage.getItem(currentUser + "_txns") || "[]");
+        const tbody = document.getElementById("txnTable");
+        tbody.innerHTML = "";
+        txns.slice().reverse().forEach(txn => {
+            const row = `<tr><td>${txn.to}</td><td>KES ${txn.amount}</td><td>KES ${txn.charge}</td><td>${txn.time}</td></tr>`;
+            tbody.innerHTML += row;
+        });
     }
-
-    if (user.password !== passwordInput) {
-      $('loginError').textContent = 'Incorrect password.';
-      return;
-    }
-
-    currentUser = user;
-function loadDashboard() {
-  clearErrors();
-  hideAllSections();
-
-  if (!currentUser) return;
-
-  if (currentUser.role === 'admin') {
-    $('adminPanel').classList.remove('hidden');
-
-    // Show admin data
-    $('userCount').textContent = Object.keys(users).length;
-    let txCount = 0;
-    for (let u in users) {
-      txCount += users[u].transactions.length;
-    }
-    $('transactionCount').textContent = txCount;
-
-  } else {
-    $('dashboard').classList.remove('hidden');
-    $('userName').textContent = `${currentUser.surname} ${currentUser.firstName}`;
-    $('walletNumber').textContent = currentUser.walletNumber;
-    $('walletBalance').textContent = `${currentUser.balance} KES`;
-    loadTransactionHistory();
-  }
-}
-
-// Fix login detection
-$('loginForm').addEventListener('submit', (e) => {
-  e.preventDefault();
-  clearErrors();
-
-  const usernameInput = $('loginUsername').value.trim();
-  const passwordInput = $('loginPassword').value;
-
-  if (!usernameInput || !passwordInput) {
-    $('loginError').textContent = 'Please enter username and password.';
-    return;
-  }
-
-  let user = null;
-
-  // Try username match (direct)
-  if (users[usernameInput]) {
-    user = users[usernameInput];
-  } else {
-    // Try login by wallet number
-    user = Object.values(users).find(u =>
-      u.walletNumber === usernameInput ||
-      u.idNumber === usernameInput || // Allow ID as username
-      u.email.toLowerCase() === usernameInput.toLowerCase()
-    );
-  }
-
-  if (!user) {
-    $('loginError').textContent = 'User not found.';
-    return;
-  }
-
-  if (user.password !== passwordInput) {
-    $('loginError').textContent = 'Incorrect password.';
-    return;
-  }
-
-  currentUser = user;
-  loadDashboard();
-});
-
-  // Load
-
+</script>
+</body>
+</html>
