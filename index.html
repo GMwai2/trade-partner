@@ -201,6 +201,17 @@
       const pin = document.getElementById('auth-pin').value.trim();
 
       if (pin !== currentUser.pin) return alert('Wrong PIN');
-      if (amount <= 0 || isNaN(amount)) return alert('Invalid amount
-::contentReference[oaicite:5]{index=5}
+      if (amount <= 0 || isNaN(amount)) return alert('Invalid amount');
+
+      const recipientUser = Object.values(users).find(u => u.wallet === toWallet);
+      if (!recipientUser) return alert('Recipient not found');
+
+      document.getElementById('confirm-recipient').textContent = toWallet;
+      document.getElementById('confirm-amount').textContent = amount.toFixed(2);
+      document.getElementById('confirmation-section').classList.remove('hidden');
+    }
+
+    function confirmTransfer() {
+     
+::contentReference[oaicite:0]{index=0}
  
