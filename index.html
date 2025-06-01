@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Wallet Platform</title>
   <style>
-    body { font-family: Arial; margin: 20px; }
+    body { font-family: Arial, sans-serif; margin: 20px; }
     .hidden { display: none; }
     input, select, button { margin: 5px; padding: 6px; }
     #confirmation-section { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
@@ -129,7 +130,6 @@
     let currentUser = null;
     let totalCharges = { 'KES': 0, 'USD': 0, 'EUR': 0 };
     let transactionLogs = [];
-    let lastTransactions = [];
 
     function showSection(id) {
       document.querySelectorAll('div').forEach(div => div.classList.add('hidden'));
@@ -143,8 +143,14 @@
       const pin = document.getElementById('reg-pin').value.trim();
       const currency = document.getElementById('currency').value;
 
-      if (!username || !password || !pin || !email) return alert('All fields required');
-      if (users[username]) return alert('Username exists');
+      if (!username || !password || !pin || !email) {
+        alert('All fields are required');
+        return;
+      }
+      if (users[username]) {
+        alert('Username already exists');
+        return;
+      }
 
       const wallet = 'WAL' + Math.floor(1000 + Math.random() * 9000);
       users[username] = { password, email, pin, wallet, balance: 0, role: 'user', currency };
@@ -157,7 +163,10 @@
       const password = document.getElementById('login-password').value.trim();
       const user = users[username];
 
-      if (!user || user.password !== password) return alert('Invalid login');
+      if (!user || user.password !== password) {
+        alert('Invalid login credentials');
+        return;
+      }
       currentUser = user;
       showDashboard(username);
     }
@@ -190,32 +199,6 @@
       chargesList.innerHTML = '';
       for (let currency in totalCharges) {
         const li = document.createElement('li');
-        li.textContent = `${currency}: ${totalCharges[currency].toFixed(2)}`;
-        chargesList.appendChild(li);
-      }
-    }
-
-    function prepareTransfer() {
-      const toWallet = document.getElementById('recipient').value.trim();
-      const amount = parseFloat(document.getElementById('amount').value);
-      const pin = document.getElementById('auth-pin').value.trim();
-
-      if (!toWallet || isNaN(amount) || !pin) {
-        alert('Please fill in all fields correctly.');
-        return;
-      }
-
-      if (pin !== currentUser.pin) {
-        alert('Incorrect PIN.');
-        return;
-      }
-
-      const recipientUser = Object.values(users).find(user => user.wallet === toWallet);
-      if (!recipientUser) {
-        alert('Recipient wallet not found.');
-        return;
-      }
-
-      if (amount <= 
-::contentReference[oaicite:1]{index=1}
+        li.textContent = `${currency}: ${total
+::contentReference[oaicite:20]{index=20}
  
