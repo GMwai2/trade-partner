@@ -1,13 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Wallet Platform</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     .hidden { display: none; }
-    input, select, button { margin: 5px; padding: 6px; width: 250px; }
+    input, select, button { margin: 5px; padding: 6px; }
+    #confirmation-section { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
+    canvas { max-width: 400px; margin: 10px 0; }
+    #transaction-log { max-height: 150px; overflow-y: scroll; border: 1px solid #ccc; padding: 5px; margin-top: 10px; font-size: 12px; }
+    #admin-panel, #subadmin-panel { border: 1px solid #000; padding: 10px; margin-top: 15px; background: #f9f9f9; }
+    #admin-panel h3, #subadmin-panel h3 { margin-top: 0; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -20,112 +26,401 @@
 
   <div id="register-section" class="hidden">
     <h3>Register</h3>
-    <input id="reg-username" placeholder="Username" /><br>
-    <input id="reg-password" type="password" placeholder="Password" /><br>
-    <input id="reg-email" placeholder="Email" /><br>
-    <input id="reg-pin" placeholder="PIN (4 digits)" /><br>
-    <select id="reg-country"></select><br>
-    <select id="reg-currency"></select><br>
+    <input id="reg-username" placeholder="Username" />
+    <input id="reg-password" type="password" placeholder="Password" />
+    <input id="reg-email" placeholder="Email" />
+    <input id="reg-pin" placeholder="PIN (4 digits)" maxlength="4" />
+    <select id="currency"></select><br>
+    <select id="country"></select><br>
     <button onclick="register()">Register</button>
     <button onclick="showSection('start-section')">Back</button>
   </div>
 
   <div id="login-section" class="hidden">
     <h3>Login</h3>
-    <input id="login-username" placeholder="Username" /><br>
-    <input id="login-password" type="password" placeholder="Password" /><br>
+    <input id="login-username" placeholder="Username" />
+    <input id="login-password" type="password" placeholder="Password" />
     <button onclick="login()">Login</button>
     <button onclick="showSection('start-section')">Back</button>
   </div>
 
-  <div id="dashboard-section" class="hidden">
-    <h3>Dashboard</h3>
-    <p>Welcome, <span id="user-name"></span></p>
-    <p>Wallet Balance: <span id="wallet-balance"></span></p>
+  <div id="user-panel" class="hidden">
+    <h3>Welcome, <span id="current-username"></span>!</h3>
+    <p><b>Role:</b> <span id="current-role"></span></p>
+
+    <div id="wallet-balances"></div>
+
+    <h4>Send Money</h4>
+    <select id="send-currency"></select>
+    <input id="send-amount" type="number" placeholder="Amount" min="0" step="0.01" />
+    <input id="send-recipient" placeholder="Recipient Username" />
+    <button onclick="sendMoney()">Send</button>
+
+    <h4>Transaction Log</h4>
+    <div id="transaction-log"></div>
+
     <button onclick="logout()">Logout</button>
   </div>
 
-  <script>
-    const countries = ["Kenya", "Nigeria", "USA", "UK", "Germany", "Japan", "Brazil", "South Africa", "India", "Canada", "Australia", "Russia", "China", "France", "Italy"];
-    const currencies = ["USD", "EUR", "KES", "NGN", "BTC", "ETH", "BNB", "USDT", "XRP", "SOL", "LTC", "DOGE"];
+  <!-- Admin Panel -->
+  <div id="admin-panel" class="hidden">
+    <h3>Admin Panel</h3>
+    <p><b>Transaction Wallet Balances:</b> <span id="admin-transaction-balance"></span></p>
+    <p><b>Trading Wallet Balances:</b> <span id="admin-trading-balance"></span></p>
 
-    const users = {};
+    <button onclick="moveFeesToTrading()">Move Fees to Trading Wallet</button>
 
-    function populateDropdowns() {
-      const countrySelect = document.getElementById('reg-country');
-      const currencySelect = document.getElementById('reg-currency');
-      countries.forEach(c => {
-        const option = document.createElement('option');
-        option.value = c;
-        option.textContent = c;
-        countrySelect.appendChild(option);
-      });
+    <h4>Transaction Fees Collected (per currency)</h4>
+    <canvas id="feesChart" width="400" height="200"></canvas>
+  </div>
+
+  <!-- Sub-Admin Panel -->
+  <div id="subadmin-panel" class="hidden">
+    <h3>Sub-Admin Panel</h3>
+    <p><b>Transaction Wallet Balances:</b> <span id="subadmin-transaction-balance"></span></p>
+    <p><b>Trading Wallet Balances:</b> <span id="subadmin-trading-balance"></span></p>
+  </div>
+
+<script>
+  // Static data for countries and currencies
+  const countries = ["Kenya", "Uganda", "USA", "UK", "Germany"];
+  const currencies = ["KES", "UGX", "USD", "GBP", "EUR"];
+
+  // Exchange rates relative to KES (initial static fallback)
+  const exchangeRates = {
+    "KES": 1,
+    "USD": 0.0085,
+    "EUR": 0.0078,
+    "UGX": 34.5,
+    "GBP": 0.0067
+  };
+
+  // User data and wallets (in-memory)
+  const users = {};
+  const transactions = [];
+
+  // Admin wallets for fees and trading
+  const adminWallets = {
+    transactionWallet: { KES: 0, USD: 0, EUR: 0, UGX: 0, GBP: 0 },
+    tradingWallet: { KES: 0, USD: 0, EUR: 0, UGX: 0, GBP: 0 }
+  };
+
+  let currentUser = null;
+
+  // Populate countries and currencies dropdowns
+  function populateCurrencies() {
+    const currencySelects = document.querySelectorAll("#currency, #send-currency");
+    currencySelects.forEach(select => {
+      select.innerHTML = "";
       currencies.forEach(c => {
-        const option = document.createElement('option');
+        const option = document.createElement("option");
         option.value = c;
         option.textContent = c;
-        currencySelect.appendChild(option);
+        select.appendChild(option);
       });
+    });
+  }
+
+  function populateCountries() {
+    const countrySelect = document.getElementById("country");
+    countrySelect.innerHTML = "";
+    countries.forEach(c => {
+      const option = document.createElement("option");
+      option.value = c;
+      option.textContent = c;
+      countrySelect.appendChild(option);
+    });
+  }
+
+  async function fetchExchangeRates() {
+    try {
+      const response = await fetch('https://api.exchangerate-api.com/v4/latest/KES');
+      if (!response.ok) throw new Error('Network response not ok');
+      const data = await response.json();
+      Object.assign(exchangeRates, data.rates);
+      console.log('Exchange rates updated:', exchangeRates);
+    } catch (error) {
+      console.error('Failed to fetch exchange rates, using cached/static rates.', error);
+    }
+  }
+
+  // Show/hide sections helper
+  function showSection(id) {
+    ["start-section", "register-section", "login-section", "user-panel", "admin-panel", "subadmin-panel"].forEach(sectionId => {
+      document.getElementById(sectionId).classList.add("hidden");
+    });
+    document.getElementById(id).classList.remove("hidden");
+  }
+
+  // User registration
+  function register() {
+    const username = document.getElementById("reg-username").value.trim();
+    const password = document.getElementById("reg-password").value;
+    const email = document.getElementById("reg-email").value.trim();
+    const pin = document.getElementById("reg-pin").value.trim();
+    const currency = document.getElementById("currency").value;
+    const country = document.getElementById("country").value;
+
+    if (!username || !password || !email || !pin || pin.length !== 4) {
+      alert("Fill all fields correctly.");
+      return;
+    }
+    if (users[username]) {
+      alert("Username already exists.");
+      return;
     }
 
-    function showSection(id) {
-      document.querySelectorAll('div').forEach(div => {
-        if (div.id.endsWith('-section')) div.classList.add('hidden');
-      });
-      document.getElementById(id).classList.remove('hidden');
+    // Basic validation for email and PIN skipped for brevity
+
+    // Create user wallet with 0 balances
+    const wallet = {};
+    currencies.forEach(c => wallet[c] = 0);
+
+    users[username] = {
+      username, password, email, pin, currency, country,
+      wallet,
+      role: "user"
+    };
+    alert("Registered successfully! Please login.");
+    showSection("login-section");
+  }
+
+  // Login
+  function login() {
+    const username = document.getElementById("login-username").value.trim();
+    const password = document.getElementById("login-password").value;
+
+    if (!users[username] || users[username].password !== password) {
+      alert("Invalid username or password.");
+      return;
+    }
+    currentUser = users[username];
+    document.getElementById("current-username").textContent = currentUser.username;
+    document.getElementById("current-role").textContent = currentUser.role;
+    updateUserWalletDisplay();
+    updateTransactionLog();
+
+    // Show user panel or admin/subadmin panels accordingly
+    if (currentUser.role === "admin") {
+      showSection("admin-panel");
+      updateAdminWalletBalances();
+    } else if (currentUser.role === "subadmin") {
+      showSection("subadmin-panel");
+      updateSubAdminWalletBalances();
+    } else {
+      showSection("user-panel");
+    }
+  }
+
+  // Logout
+  function logout() {
+    currentUser = null;
+    showSection("start-section");
+  }
+
+  // Update user wallet balances display
+  function updateUserWalletDisplay() {
+    const walletDiv = document.getElementById("wallet-balances");
+    let walletStr = "<h4>Your Wallet Balances:</h4>";
+    for (const c in currentUser.wallet) {
+      walletStr += `${c}: ${currentUser.wallet[c].toFixed(2)}<br>`;
+    }
+    walletDiv.innerHTML = walletStr;
+
+    // Update send currency dropdown default to user's currency
+    const sendCurrencySelect = document.getElementById("send-currency");
+    sendCurrencySelect.value = currentUser.currency;
+  }
+
+  // Transfer money logic with fees and currency conversion
+  function sendMoney() {
+    if (!currentUser) return alert("Login required");
+
+    const fromCurrency = document.getElementById("send-currency").value;
+    let amount = parseFloat(document.getElementById("send-amount").value);
+    const recipientName = document.getElementById("send-recipient").value.trim();
+
+    if (!recipientName || isNaN(amount) || amount <= 0) {
+      return alert("Enter valid recipient and amount.");
+    }
+    if (!users[recipientName]) {
+      return alert("Recipient does not exist.");
+    }
+    if (recipientName === currentUser.username) {
+      return alert("Cannot send money to yourself.");
     }
 
-    function register() {
-      const username = document.getElementById('reg-username').value.trim();
-      const password = document.getElementById('reg-password').value.trim();
-      const email = document.getElementById('reg-email').value.trim();
-      const pin = document.getElementById('reg-pin').value.trim();
-      const country = document.getElementById('reg-country').value;
-      const currency = document.getElementById('reg-currency').value;
+    const senderWallet = currentUser.wallet;
+    if (senderWallet[fromCurrency] < amount) {
+      return alert("Insufficient funds.");
+    }
 
-      if (!username || !password || !email || !pin) {
-        alert("All fields are required.");
-        return;
+    // Calculate transaction fee
+    // Fee applies if amount in KES >= 250, fee is 0.5%, capped at 1000 KES equivalent
+    const amountInKES = amount / (exchangeRates[fromCurrency] || 1); // Convert amount to KES equivalent
+    let feeKES = 0;
+    if (amountInKES >= 250) {
+      feeKES = Math.min(amountInKES * 0.005, 1000);
+    }
+    // Convert fee back to fromCurrency
+    const feeInFromCurrency = feeKES * (exchangeRates[fromCurrency] || 1);
+
+    const totalDebit = amount + feeInFromCurrency;
+
+    if (senderWallet[fromCurrency] < totalDebit) {
+      return alert(`Insufficient funds to cover amount and fee (fee ~${feeInFromCurrency.toFixed(2)} ${fromCurrency}).`);
+    }
+
+    // Deduct from sender
+    senderWallet[fromCurrency] -= totalDebit;
+
+    // Credit recipient after converting amount to recipient currency
+    const recipient = users[recipientName];
+    const toCurrency = recipient.currency;
+    const amountInKESForCredit = amount / (exchangeRates[fromCurrency] || 1);
+    const creditAmount = amountInKESForCredit * (exchangeRates[toCurrency] || 1);
+
+    recipient.wallet[toCurrency] += creditAmount;
+
+    // Add fee to admin transaction wallet (in KES equivalent, but we store per currency)
+    // Convert feeKES to fromCurrency (or better: just add feeKES in KES wallet)
+    adminWallets.transactionWallet["KES"] += feeKES;
+
+    // Log transaction
+    transactions.push({
+      timestamp: new Date().toISOString(),
+      from: currentUser.username,
+      to: recipientName,
+      amountSent: amount,
+      currencySent: fromCurrency,
+      amountReceived: creditAmount,
+      currencyReceived: toCurrency,
+      feeKES,
+    });
+
+    updateUserWalletDisplay();
+    updateTransactionLog();
+    if (currentUser.role === "admin") updateAdminWalletBalances();
+    if (currentUser.role === "subadmin") updateSubAdminWalletBalances();
+
+    alert(`Sent ${amount.toFixed(2)} ${fromCurrency} to ${recipientName} (credited ${creditAmount.toFixed(2)} ${toCurrency}). Fee: ${feeKES.toFixed(2)} KES.`);
+  }
+
+  // Update transaction log UI
+  function updateTransactionLog() {
+    const logDiv = document.getElementById("transaction-log");
+    if (!logDiv) return;
+    let html = "";
+    // Show last 20 transactions involving current user
+    const userTxns = transactions.filter(t => t.from === currentUser.username || t.to === currentUser.username);
+    userTxns.slice(-20).reverse().forEach(t => {
+      html += `<div>${t.timestamp} | From: ${t.from} | To: ${t.to} | Sent: ${t.amountSent.toFixed(2)} ${t.currencySent} | Received: ${t.amountReceived.toFixed(2)} ${t.currencyReceived} | Fee: ${t.feeKES.toFixed(2)} KES</div>`;
+    });
+    logDiv.innerHTML = html || "No transactions yet.";
+  }
+
+  // Admin Panel Wallet Balances display
+  function updateAdminWalletBalances() {
+    let transactionBalStr = "";
+    let tradingBalStr = "";
+    for (const c in adminWallets.transactionWallet) {
+      transactionBalStr += `${c}: ${adminWallets.transactionWallet[c].toFixed(2)} | `;
+      tradingBalStr += `${c}: ${adminWallets.tradingWallet[c].toFixed(2)} | `;
+    }
+    document.getElementById("admin-transaction-balance").textContent = transactionBalStr;
+    document.getElementById("admin-trading-balance").textContent = tradingBalStr;
+
+    renderFeesChart();
+  }
+
+  // Move fees from transaction wallet to trading wallet (admin only)
+  function moveFeesToTrading() {
+    for (const c in adminWallets.transactionWallet) {
+      adminWallets.tradingWallet[c] += adminWallets.transactionWallet[c];
+      adminWallets.transactionWallet[c] = 0;
+    }
+    updateAdminWalletBalances();
+    alert("Moved all fees from transaction wallet to trading wallet.");
+  }
+
+  // Render Chart.js bar chart for admin fees collected
+  let feesChartInstance = null;
+  function renderFeesChart() {
+    const ctx = document.getElementById('feesChart').getContext('2d');
+
+    const labels = Object.keys(adminWallets.transactionWallet);
+    const data = Object.values(adminWallets.transactionWallet).map(a => a.toFixed(2));
+
+    if (feesChartInstance) {
+      feesChartInstance.data.labels = labels;
+      feesChartInstance.data.datasets[0].data = data;
+      feesChartInstance.update();
+      return;
+    }
+
+    feesChartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Fees Collected',
+          data,
+          backgroundColor: 'rgba(54, 162, 235, 0.7)',
+        }]
+      },
+      options: {
+        scales: { y: { beginAtZero: true } }
       }
+    });
+  }
 
-      if (users[username]) {
-        alert("Username already exists.");
-        return;
-      }
+  // Sub-Admin Panel Balances display (read-only)
+  function updateSubAdminWalletBalances() {
+    let transactionBalStr = "";
+    let tradingBalStr = "";
+    for (const c in adminWallets.transactionWallet) {
+      transactionBalStr += `${c}: ${adminWallets.transactionWallet[c].toFixed(2)} | `;
+      tradingBalStr += `${c}: ${adminWallets.tradingWallet[c].toFixed(2)} | `;
+    }
+    document.getElementById("subadmin-transaction-balance").textContent = transactionBalStr;
+    document.getElementById("subadmin-trading-balance").textContent = tradingBalStr;
+  }
 
-      users[username] = {
-        password,
-        email,
-        pin,
-        country,
-        currency,
-        balance: 0
+  // Initialize admin and subadmin users for demo
+  function setupInitialUsers() {
+    if (!users["admin"]) {
+      users["admin"] = {
+        username: "admin",
+        password: "adminpass",
+        email: "admin@example.com",
+        pin: "1234",
+        currency: "KES",
+        country: "Kenya",
+        wallet: { KES: 100000, USD: 1000, EUR: 1000, UGX: 5000000, GBP: 1000 },
+        role: "admin"
       };
-
-      alert("Registration successful!");
-      showSection("login-section");
     }
-
-    function login() {
-      const username = document.getElementById('login-username').value.trim();
-      const password = document.getElementById('login-password').value.trim();
-      const user = users[username];
-
-      if (!user || user.password !== password) {
-        alert("Invalid credentials");
-        return;
-      }
-
-      document.getElementById("user-name").textContent = username;
-      document.getElementById("wallet-balance").textContent = `${user.balance} ${user.currency}`;
-      showSection("dashboard-section");
+    if (!users["subadmin"]) {
+      users["subadmin"] = {
+        username: "subadmin",
+        password: "subpass",
+        email: "subadmin@example.com",
+        pin: "4321",
+        currency: "KES",
+        country: "Kenya",
+        wallet: { KES: 10000, USD: 100, EUR: 100, UGX: 500000, GBP: 100 },
+        role: "subadmin"
+      };
     }
+  }
 
-    function logout() {
-      showSection("start-section");
-    }
-
-    window.onload = populateDropdowns;
-  </script>
+  window.onload = () => {
+    populateCurrencies();
+    populateCountries();
+    fetchExchangeRates();
+    setupInitialUsers();
+    showSection("start-section");
+  };
+</script>
 </body>
 </html>
