@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Wallet Platform</title>
+  <title>Multi-Currency Wallet Platform</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     .hidden { display: none; }
@@ -170,8 +170,6 @@
       return;
     }
 
-    // Basic validation for email and PIN skipped for brevity
-
     // Create user wallet with 0 balances
     const wallet = {};
     currencies.forEach(c => wallet[c] = 0);
@@ -240,187 +238,6 @@
     let amount = parseFloat(document.getElementById("send-amount").value);
     const recipientName = document.getElementById("send-recipient").value.trim();
 
-    if (!recipientName || isNaN(amount) || amount <= 0) {
-      return alert("Enter valid recipient and amount.");
-    }
-    if (!users[recipientName]) {
-      return alert("Recipient does not exist.");
-    }
-    if (recipientName === currentUser.username) {
-      return alert("Cannot send money to yourself.");
-    }
 
-    const senderWallet = currentUser.wallet;
-    if (senderWallet[fromCurrency] < amount) {
-      return alert("Insufficient funds.");
-    }
-
-    // Calculate transaction fee
-    // Fee applies if amount in KES >= 250, fee is 0.5%, capped at 1000 KES equivalent
-    const amountInKES = amount / (exchangeRates[fromCurrency] || 1); // Convert amount to KES equivalent
-    let feeKES = 0;
-    if (amountInKES >= 250) {
-      feeKES = Math.min(amountInKES * 0.005, 1000);
-    }
-    // Convert fee back to fromCurrency
-    const feeInFromCurrency = feeKES * (exchangeRates[fromCurrency] || 1);
-
-    const totalDebit = amount + feeInFromCurrency;
-
-    if (senderWallet[fromCurrency] < totalDebit) {
-      return alert(`Insufficient funds to cover amount and fee (fee ~${feeInFromCurrency.toFixed(2)} ${fromCurrency}).`);
-    }
-
-    // Deduct from sender
-    senderWallet[fromCurrency] -= totalDebit;
-
-    // Credit recipient after converting amount to recipient currency
-    const recipient = users[recipientName];
-    const toCurrency = recipient.currency;
-    const amountInKESForCredit = amount / (exchangeRates[fromCurrency] || 1);
-    const creditAmount = amountInKESForCredit * (exchangeRates[toCurrency] || 1);
-
-    recipient.wallet[toCurrency] += creditAmount;
-
-    // Add fee to admin transaction wallet (in KES equivalent, but we store per currency)
-    // Convert feeKES to fromCurrency (or better: just add feeKES in KES wallet)
-    adminWallets.transactionWallet["KES"] += feeKES;
-
-    // Log transaction
-    transactions.push({
-      timestamp: new Date().toISOString(),
-      from: currentUser.username,
-      to: recipientName,
-      amountSent: amount,
-      currencySent: fromCurrency,
-      amountReceived: creditAmount,
-      currencyReceived: toCurrency,
-      feeKES,
-    });
-
-    updateUserWalletDisplay();
-    updateTransactionLog();
-    if (currentUser.role === "admin") updateAdminWalletBalances();
-    if (currentUser.role === "subadmin") updateSubAdminWalletBalances();
-
-    alert(`Sent ${amount.toFixed(2)} ${fromCurrency} to ${recipientName} (credited ${creditAmount.toFixed(2)} ${toCurrency}). Fee: ${feeKES.toFixed(2)} KES.`);
-  }
-
-  // Update transaction log UI
-  function updateTransactionLog() {
-    const logDiv = document.getElementById("transaction-log");
-    if (!logDiv) return;
-    let html = "";
-    // Show last 20 transactions involving current user
-    const userTxns = transactions.filter(t => t.from === currentUser.username || t.to === currentUser.username);
-    userTxns.slice(-20).reverse().forEach(t => {
-      html += `<div>${t.timestamp} | From: ${t.from} | To: ${t.to} | Sent: ${t.amountSent.toFixed(2)} ${t.currencySent} | Received: ${t.amountReceived.toFixed(2)} ${t.currencyReceived} | Fee: ${t.feeKES.toFixed(2)} KES</div>`;
-    });
-    logDiv.innerHTML = html || "No transactions yet.";
-  }
-
-  // Admin Panel Wallet Balances display
-  function updateAdminWalletBalances() {
-    let transactionBalStr = "";
-    let tradingBalStr = "";
-    for (const c in adminWallets.transactionWallet) {
-      transactionBalStr += `${c}: ${adminWallets.transactionWallet[c].toFixed(2)} | `;
-      tradingBalStr += `${c}: ${adminWallets.tradingWallet[c].toFixed(2)} | `;
-    }
-    document.getElementById("admin-transaction-balance").textContent = transactionBalStr;
-    document.getElementById("admin-trading-balance").textContent = tradingBalStr;
-
-    renderFeesChart();
-  }
-
-  // Move fees from transaction wallet to trading wallet (admin only)
-  function moveFeesToTrading() {
-    for (const c in adminWallets.transactionWallet) {
-      adminWallets.tradingWallet[c] += adminWallets.transactionWallet[c];
-      adminWallets.transactionWallet[c] = 0;
-    }
-    updateAdminWalletBalances();
-    alert("Moved all fees from transaction wallet to trading wallet.");
-  }
-
-  // Render Chart.js bar chart for admin fees collected
-  let feesChartInstance = null;
-  function renderFeesChart() {
-    const ctx = document.getElementById('feesChart').getContext('2d');
-
-    const labels = Object.keys(adminWallets.transactionWallet);
-    const data = Object.values(adminWallets.transactionWallet).map(a => a.toFixed(2));
-
-    if (feesChartInstance) {
-      feesChartInstance.data.labels = labels;
-      feesChartInstance.data.datasets[0].data = data;
-      feesChartInstance.update();
-      return;
-    }
-
-    feesChartInstance = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Fees Collected',
-          data,
-          backgroundColor: 'rgba(54, 162, 235, 0.7)',
-        }]
-      },
-      options: {
-        scales: { y: { beginAtZero: true } }
-      }
-    });
-  }
-
-  // Sub-Admin Panel Balances display (read-only)
-  function updateSubAdminWalletBalances() {
-    let transactionBalStr = "";
-    let tradingBalStr = "";
-    for (const c in adminWallets.transactionWallet) {
-      transactionBalStr += `${c}: ${adminWallets.transactionWallet[c].toFixed(2)} | `;
-      tradingBalStr += `${c}: ${adminWallets.tradingWallet[c].toFixed(2)} | `;
-    }
-    document.getElementById("subadmin-transaction-balance").textContent = transactionBalStr;
-    document.getElementById("subadmin-trading-balance").textContent = tradingBalStr;
-  }
-
-  // Initialize admin and subadmin users for demo
-  function setupInitialUsers() {
-    if (!users["admin"]) {
-      users["admin"] = {
-        username: "admin",
-        password: "adminpass",
-        email: "admin@example.com",
-        pin: "1234",
-        currency: "KES",
-        country: "Kenya",
-        wallet: { KES: 100000, USD: 1000, EUR: 1000, UGX: 5000000, GBP: 1000 },
-        role: "admin"
-      };
-    }
-    if (!users["subadmin"]) {
-      users["subadmin"] = {
-        username: "subadmin",
-        password: "subpass",
-        email: "subadmin@example.com",
-        pin: "4321",
-        currency: "KES",
-        country: "Kenya",
-        wallet: { KES: 10000, USD: 100, EUR: 100, UGX: 500000, GBP: 100 },
-        role: "subadmin"
-      };
-    }
-  }
-
-  window.onload = () => {
-    populateCurrencies();
-    populateCountries();
-    fetchExchangeRates();
-    setupInitialUsers();
-    showSection("start-section");
-  };
-</script>
-</body>
-</html>
+::contentReference[oaicite:15]{index=15}
+ 
