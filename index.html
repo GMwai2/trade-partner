@@ -1,214 +1,248 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Wallet Platform</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    .hidden { display: none; }
-    .panel { border: 1px solid #ccc; padding: 15px; margin: 10px 0; }
-    .admin-only { background-color: #f0f0f0; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Multi-Currency Wallet Platform</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  .wallet, .transfer, .admin, .confirmation-popup {
+    border: 1px solid #ccc; padding: 15px; margin-bottom: 20px;
+  }
+  .hidden { display: none; }
+  label { display: block; margin-top: 10px; }
+  input, select { width: 100%; padding: 8px; margin-top: 5px; }
+  button { margin-top: 15px; padding: 10px 15px; cursor: pointer; }
+  #confirmation-popup {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+  }
+  #confirmation-content {
+    background: white; padding: 20px; border-radius: 5px; width: 300px;
+  }
+</style>
 </head>
 <body>
 
-<h2>Multi-Currency Wallet Platform</h2>
+<h1>Multi-Currency Wallet Platform</h1>
 
-<!-- Login/Register Section -->
-<div id="auth-section">
-  <h3>Register</h3>
-  <input id="reg-username" placeholder="Username" />
-  <input id="reg-password" placeholder="Password" type="password" />
-  <select id="reg-country"></select>
-  <select id="reg-role">
-    <option value="user">User</option>
-    <option value="sub-admin">Sub-Admin</option>
-    <option value="admin">Admin</option>
-  </select>
-  <button onclick="register()">Register</button>
-
-  <h3>Login</h3>
-  <input id="login-username" placeholder="Username" />
-  <input id="login-password" placeholder="Password" type="password" />
-  <button onclick="login()">Login</button>
+<div class="wallet">
+  <h2>Your Wallets</h2>
+  <div id="wallet-balances"></div>
 </div>
 
-<!-- Main App Section -->
-<div id="app-section" class="hidden">
-  <h3>Welcome, <span id="user-label"></span>!</h3>
-  <button onclick="logout()">Logout</button>
+<div class="transfer">
+  <h2>Send Money</h2>
+  <label for="sender-currency">From Currency:</label>
+  <select id="sender-currency"></select>
 
-  <div class="panel">
-    <h4>Your Wallets</h4>
-    <div id="wallet-balances"></div>
+  <label for="recipient-account">Recipient Account Number:</label>
+  <input type="text" id="recipient-account" placeholder="Enter recipient account number" />
 
-    <h4>Send Money</h4>
-    <select id="send-to"></select>
-    <input id="send-amount" placeholder="Amount" type="number" />
-    <select id="send-currency"></select>
-    <button onclick="sendMoney()">Send</button>
+  <label for="recipient-currency">Recipient Currency:</label>
+  <select id="recipient-currency"></select>
+
+  <label for="transfer-amount">Amount to Send:</label>
+  <input type="number" id="transfer-amount" min="0" step="0.01" placeholder="Amount" />
+
+  <button id="initiate-transfer-btn">Send Money</button>
+</div>
+
+<div id="confirmation-popup" class="hidden">
+  <div id="confirmation-content">
+    <h3>Confirm Transfer</h3>
+    <p id="confirmation-details"></p>
+    <label for="pin-input">Enter PIN to authorize:</label>
+    <input type="password" id="pin-input" maxlength="6" />
+    <button id="confirm-transfer-btn">Confirm Transfer</button>
+    <button id="cancel-transfer-btn">Cancel</button>
   </div>
+</div>
 
-  <div id="admin-section" class="hidden panel admin-only">
-    <h4>Admin Wallet (EUR only)</h4>
-    <p>Transaction Wallet: <span id="admin-transaction-wallet"></span> EUR</p>
-    <p>Trading Wallet: <span id="admin-trading-wallet"></span> EUR</p>
-    <input id="admin-transfer-amount" type="number" placeholder="Amount to Transfer to Trading" />
-    <button onclick="transferToTrading()">Transfer to Trading Wallet</button>
-  </div>
-
-  <div class="panel">
-    <h4>Transaction History</h4>
-    <div id="tx-history"></div>
-  </div>
-
-  <div class="panel">
-    <h4>Performance Chart</h4>
-    <canvas id="chart" width="400" height="200"></canvas>
+<div class="admin">
+  <h2>Admin Dashboard</h2>
+  <div id="admin-info">
+    <p><strong>Transaction Wallet (EUR):</strong> <span id="transaction-wallet">0.00</span> EUR</p>
+    <p><strong>Trading Wallet (EUR):</strong> <span id="trading-wallet">0.00</span> EUR</p>
   </div>
 </div>
 
 <script>
-const users = {};
-const exchangeRates = { USD: 1, EUR: 0.92, KES: 115, BTC: 0.000021 };
-const countries = ["Kenya", "USA", "Germany", "India", "Brazil", "UK", "China", "Japan", "UAE", "South Africa"];
-const countryDropdown = document.getElementById('reg-country');
-countries.forEach(c => {
-  const option = document.createElement("option");
-  option.text = c;
-  option.value = c;
-  countryDropdown.add(option);
-});
-
-let currentUser = null;
-let chart;
-
-function register() {
-  const username = document.getElementById("reg-username").value;
-  const password = document.getElementById("reg-password").value;
-  const country = document.getElementById("reg-country").value;
-  const role = document.getElementById("reg-role").value;
-
-  if (users[username]) return alert("User exists");
-
-  users[username] = {
-    username, password, country, role,
-    wallets: { USD: 1000, EUR: 500, KES: 10000, BTC: 0.05 },
-    txWallet: 0,
-    tradingWallet: 0,
-    transactions: []
+  // Mock user wallets with balances
+  const userWallets = {
+    USD: 1000.00,
+    EUR: 800.00,
+    KES: 50000.00,
+    GBP: 700.00
   };
-  alert("Registered");
-}
 
-function login() {
-  const username = document.getElementById("login-username").value;
-  const password = document.getElementById("login-password").value;
+  // Mock admin wallets
+  let adminTransactionWalletEUR = 0.00;
+  let adminTradingWalletEUR = 0.00;
 
-  if (!users[username] || users[username].password !== password) return alert("Invalid login");
+  // Mock exchange rates (1 unit of key currency to EUR)
+  const exchangeRatesToEUR = {
+    USD: 0.91,
+    EUR: 1,
+    KES: 0.0069,
+    GBP: 1.14
+  };
 
-  currentUser = users[username];
-  document.getElementById("auth-section").classList.add("hidden");
-  document.getElementById("app-section").classList.remove("hidden");
-  document.getElementById("user-label").innerText = username;
-  document.getElementById("admin-section").classList.toggle("hidden", currentUser.role !== "admin");
-  updateUI();
-}
+  // Transaction fee: 0.5% for transfers >= KES 250 equivalent, capped at KES 1000 equivalent
+  // All fees go to adminTransactionWalletEUR
 
-function logout() {
-  currentUser = null;
-  document.getElementById("auth-section").classList.remove("hidden");
-  document.getElementById("app-section").classList.add("hidden");
-}
+  // Populate currency selectors
+  const senderCurrencySelect = document.getElementById('sender-currency');
+  const recipientCurrencySelect = document.getElementById('recipient-currency');
 
-function updateUI() {
-  const walletsDiv = document.getElementById("wallet-balances");
-  walletsDiv.innerHTML = Object.entries(currentUser.wallets).map(
-    ([cur, bal]) => `<p>${cur}: ${bal.toFixed(2)}</p>`).join("");
+  Object.keys(userWallets).forEach(currency => {
+    const option1 = document.createElement('option');
+    option1.value = currency;
+    option1.textContent = currency;
+    senderCurrencySelect.appendChild(option1);
 
-  const userOptions = Object.values(users).filter(u => u !== currentUser).map(
-    u => `<option value="${u.username}">${u.username}</option>`).join("");
-  document.getElementById("send-to").innerHTML = userOptions;
+    const option2 = document.createElement('option');
+    option2.value = currency;
+    option2.textContent = currency;
+    recipientCurrencySelect.appendChild(option2);
+  });
 
-  const currencies = Object.keys(exchangeRates);
-  document.getElementById("send-currency").innerHTML = currencies.map(c => `<option value="${c}">${c}</option>`).join("");
-
-  const txDiv = document.getElementById("tx-history");
-  txDiv.innerHTML = currentUser.transactions.slice(-5).reverse().map(t => `<p>${t}</p>`).join("");
-
-  if (currentUser.role === "admin") {
-    document.getElementById("admin-transaction-wallet").innerText = currentUser.txWallet.toFixed(2);
-    document.getElementById("admin-trading-wallet").innerText = currentUser.tradingWallet.toFixed(2);
-  }
-
-  updateChart();
-}
-
-function sendMoney() {
-  const toUser = document.getElementById("send-to").value;
-  const amount = parseFloat(document.getElementById("send-amount").value);
-  const currency = document.getElementById("send-currency").value;
-
-  if (!toUser || isNaN(amount) || amount <= 0) return alert("Invalid input");
-  if (currentUser.wallets[currency] < amount) return alert("Insufficient funds");
-
-  const baseKES = amount * (1 / exchangeRates.KES) * exchangeRates[currency];
-  let fee = baseKES >= 250 ? 0.005 * amount : 0;
-  if (fee > 1000 / exchangeRates[currency]) fee = 1000 / exchangeRates[currency];
-
-  const netAmount = amount - fee;
-  currentUser.wallets[currency] -= amount;
-
-  const recipient = users[toUser];
-  recipient.wallets[currency] = (recipient.wallets[currency] || 0) + netAmount;
-
-  const admin = Object.values(users).find(u => u.role === "admin");
-  if (admin) {
-    const feeInEUR = fee * exchangeRates[currency] / exchangeRates.EUR;
-    admin.txWallet += feeInEUR;
-  }
-
-  const txNote = `${currency} ${amount} sent to ${toUser}, Fee: ${fee.toFixed(2)} ${currency}`;
-  currentUser.transactions.push(txNote);
-  recipient.transactions.push(`Received ${currency} ${netAmount.toFixed(2)} from ${currentUser.username}`);
-
-  updateUI();
-}
-
-function transferToTrading() {
-  const amount = parseFloat(document.getElementById("admin-transfer-amount").value);
-  if (isNaN(amount) || amount <= 0 || amount > currentUser.txWallet) return alert("Invalid");
-
-  currentUser.txWallet -= amount;
-  currentUser.tradingWallet += amount;
-  updateUI();
-}
-
-function updateChart() {
-  const tx = currentUser.transactions;
-  const summary = {};
-  tx.forEach(entry => {
-    const match = entry.match(/([A-Z]{3}) (\d+(\.\d+)?)/);
-    if (match) {
-      const [_, cur, amt] = match;
-      summary[cur] = (summary[cur] || 0) + parseFloat(amt);
+  // Display wallet balances
+  function updateWalletDisplay() {
+    const container = document.getElementById('wallet-balances');
+    container.innerHTML = '';
+    for (const [currency, balance] of Object.entries(userWallets)) {
+      const p = document.createElement('p');
+      p.textContent = `${currency}: ${balance.toFixed(2)}`;
+      container.appendChild(p);
     }
+
+    document.getElementById('transaction-wallet').textContent = adminTransactionWalletEUR.toFixed(2);
+    document.getElementById('trading-wallet').textContent = adminTradingWalletEUR.toFixed(2);
+  }
+
+  updateWalletDisplay();
+
+  // Conversion utility: amount from currency A to currency B
+  function convertCurrency(amount, fromCurrency, toCurrency) {
+    if(fromCurrency === toCurrency) return amount;
+    // Convert to EUR first
+    const amountInEUR = amount * exchangeRatesToEUR[fromCurrency];
+    // Convert EUR to target currency
+    return amountInEUR / exchangeRatesToEUR[toCurrency];
+  }
+
+  // Calculate fee in sender currency
+  function calculateFee(amount, currency) {
+    // Convert amount to KES equivalent
+    const amountKES = convertCurrency(amount, currency, 'KES');
+    if (amountKES < 250) return 0;
+    // Fee is 0.5% capped at 1000 KES equivalent
+    const feeKES = Math.min(amountKES * 0.005, 1000);
+    // Convert fee back to sender currency
+    return convertCurrency(feeKES, 'KES', currency);
+  }
+
+  // Transfer flow
+  const initiateTransferBtn = document.getElementById('initiate-transfer-btn');
+  const confirmationPopup = document.getElementById('confirmation-popup');
+  const confirmationDetails = document.getElementById('confirmation-details');
+  const pinInput = document.getElementById('pin-input');
+  const confirmTransferBtn = document.getElementById('confirm-transfer-btn');
+  const cancelTransferBtn = document.getElementById('cancel-transfer-btn');
+
+  let pendingTransfer = null;
+
+  initiateTransferBtn.addEventListener('click', () => {
+    const senderCurrency = senderCurrencySelect.value;
+    const recipientAccount = document.getElementById('recipient-account').value.trim();
+    const recipientCurrency = recipientCurrencySelect.value;
+    const amount = parseFloat(document.getElementById('transfer-amount').value);
+
+    if (!recipientAccount) {
+      alert('Please enter the recipient account number.');
+      return;
+    }
+    if (isNaN(amount) || amount <= 0) {
+      alert('Please enter a valid transfer amount.');
+      return;
+    }
+    if (!userWallets.hasOwnProperty(senderCurrency)) {
+      alert('Invalid sender currency.');
+      return;
+    }
+    if (!userWallets.hasOwnProperty(recipientCurrency)) {
+      alert('Invalid recipient currency.');
+      return;
+    }
+    if (userWallets[senderCurrency] < amount) {
+      alert('Insufficient balance in sender wallet.');
+      return;
+    }
+
+    // Calculate fee and total deduction
+    const fee = calculateFee(amount, senderCurrency);
+    const totalDeduction = amount + fee;
+
+    if (userWallets[senderCurrency] < totalDeduction) {
+      alert(`Insufficient balance to cover amount plus fee (${fee.toFixed(2)} ${senderCurrency}).`);
+      return;
+    }
+
+    // Prepare confirmation details
+    const amountRecipient = convertCurrency(amount, senderCurrency, recipientCurrency);
+
+    confirmationDetails.innerHTML = `
+      <strong>From:</strong> Your Account<br/>
+      <strong>To Account:</strong> ${recipientAccount}<br/>
+      <strong>Send:</strong> ${amount.toFixed(2)} ${senderCurrency}<br/>
+      <strong>Recipient Gets:</strong> ${amountRecipient.toFixed(2)} ${recipientCurrency}<br/>
+      <strong>Transaction Fee:</strong> ${fee.toFixed(2)} ${senderCurrency}<br/>
+      <strong>Total Deducted:</strong> ${(totalDeduction).toFixed(2)} ${senderCurrency}
+    `;
+
+    pinInput.value = '';
+    pendingTransfer = {
+      senderCurrency,
+      recipientAccount,
+      recipientCurrency,
+      amount,
+      fee,
+      totalDeduction,
+      amountRecipient
+    };
+
+    confirmationPopup.classList.remove('hidden');
   });
 
-  const labels = Object.keys(summary);
-  const data = Object.values(summary);
+  confirmTransferBtn.addEventListener('click', () => {
+    const pin = pinInput.value;
+    if (pin.length === 0) {
+      alert('Please enter your PIN.');
+      return;
+    }
+    // For demo, any pin is accepted. Implement real PIN check as needed.
 
-  if (chart) chart.destroy();
-  chart = new Chart(document.getElementById("chart"), {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{ label: 'Currency Activity', data, backgroundColor: 'rgba(54, 162, 235, 0.6)' }]
-    },
-    options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    // Perform transfer
+    userWallets[pendingTransfer.senderCurrency] -= pendingTransfer.totalDeduction;
+
+    // Normally, recipient would be updated in database; here we just log it.
+
+    // Add fee to admin transaction wallet in EUR
+    adminTransactionWalletEUR += pendingTransfer.fee * exchangeRatesToEUR[pendingTransfer.senderCurrency];
+
+    updateWalletDisplay();
+    confirmationPopup.classList.add('hidden');
+    alert('Transfer successful.');
+
+    pendingTransfer = null;
   });
-}
+
+  cancelTransferBtn.addEventListener('click', () => {
+    confirmationPopup.classList.add('hidden');
+    pendingTransfer = null;
+  });
 </script>
+
 </body>
 </html>
