@@ -5,25 +5,26 @@
   <title>Global Wallet Platform</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f9f9f9; }
     .hidden { display: none; }
     input, select, button { margin: 5px; padding: 6px; width: 200px; }
-    #confirmation-section { border: 1px solid #ccc; padding: 10px; background: #fff; }
-    canvas { max-width: 500px; background: #fff; margin-top: 10px; }
-    h2, h3 { color: #333; }
+    #confirmation-section { border: 1px solid #ccc; padding: 10px; margin-top: 10px; background: #fff; }
+    canvas { max-width: 500px; margin: 10px; background: #fff; }
+    h2, h3, h4 { color: #333; }
     button { background-color: #4CAF50; color: white; border: none; cursor: pointer; }
     button:hover { background-color: #45a049; }
+    select { width: 210px; }
   </style>
 </head>
 <body>
-<h2>Global Wallet Platform</h2>
 
+<h2>Global Wallet Platform</h2>
 <div id="start-section">
   <button onclick="showSection('login-section')">Login</button>
   <button onclick="showSection('register-section')">Register</button>
 </div>
 
-<!-- Registration -->
+<!-- Registration Section -->
 <div id="register-section" class="hidden">
   <h3>Register</h3>
   <input id="reg-username" placeholder="Username" />
@@ -36,7 +37,7 @@
   <button onclick="showSection('start-section')">Back</button>
 </div>
 
-<!-- Login -->
+<!-- Login Section -->
 <div id="login-section" class="hidden">
   <h3>Login</h3>
   <input id="login-username" placeholder="Username" />
@@ -45,186 +46,71 @@
   <button onclick="showSection('start-section')">Back</button>
 </div>
 
-<!-- Dashboard -->
-<div id="dashboard-section" class="hidden">
-  <h3>Welcome, <span id="user-name"></span></h3>
-  <p>Wallet: <span id="user-wallet"></span></p>
-  <p>Balance: <span id="user-balance"></span> <span id="user-currency"></span></p>
-
-  <h4>Transfer Funds</h4>
-  <input id="recipient" placeholder="Recipient Wallet" />
-  <input id="amount" type="number" placeholder="Amount" />
-  <input id="auth-pin" placeholder="Enter PIN" maxlength="4" />
-  <button onclick="prepareTransfer()">Send</button>
+<!-- Admin Dashboard -->
+<div id="admin-dashboard" class="hidden">
+  <h3>Admin Dashboard</h3>
+  <p><strong>Total Fees Collected (KES):</strong> <span id="total-fees">0</span></p>
+  <button onclick="showSection('transfer-section')">Make Transfer</button>
+  <button onclick="showSection('chart-section'); showCharts();">View Charts</button>
   <button onclick="logout()">Logout</button>
 </div>
 
-<!-- Confirmation -->
-<div id="confirmation-section" class="hidden">
-  <h3>Confirm Transfer</h3>
-  <p>To: <span id="confirm-recipient"></span></p>
-  <p>Amount: <span id="confirm-amount"></span></p>
-  <button onclick="confirmTransfer()">Confirm</button>
-  <button onclick="cancelTransfer()">Cancel</button>
+<!-- Transfer Section -->
+<div id="transfer-section" class="hidden">
+  <h3>Transfer Funds</h3>
+  <input id="transfer-amount" type="number" placeholder="Amount" />
+  <select id="from-currency"></select>
+  <select id="to-currency"></select>
+  <input id="recipient-username" placeholder="Recipient Username" />
+  <button onclick="initiateTransfer()">Transfer</button>
+  <button onclick="showSection('admin-dashboard')">Back</button>
+</div>
+
+<!-- Chart Section -->
+<div id="chart-section" class="hidden">
+  <h3>Transaction Charts</h3>
+  <canvas id="transactionChart"></canvas>
+  <button onclick="showSection('admin-dashboard')">Back</button>
 </div>
 
 <script>
-  const users = {};
-  const currencies = ["KES", "USD", "EUR", "BTC", "ETH", "USDT"];
-  const countries = ["Kenya", "USA", "UK", "Germany", "China", "India", "Brazil", "Nigeria"];
-  const exchangeRates = {
-    "KES": { "USD": 0.0067, "EUR": 0.0061, "BTC": 0.00000022, "ETH": 0.0000033, "USDT": 0.0067 },
-    "USD": { "KES": 149.2, "EUR": 0.91, "BTC": 0.000032, "ETH": 0.00049, "USDT": 1 },
-    "EUR": { "KES": 164.5, "USD": 1.1, "BTC": 0.000035, "ETH": 0.00053, "USDT": 1.1 },
-    "BTC": { "KES": 4500000, "USD": 31000, "EUR": 28000, "ETH": 15, "USDT": 31000 },
-    "ETH": { "KES": 300000, "USD": 2100, "EUR": 1900, "BTC": 0.066, "USDT": 2100 },
-    "USDT": { "KES": 149.2, "USD": 1, "EUR": 0.91, "BTC": 0.000032, "ETH": 0.00049 }
-  };
-  const totalCharges = { "KES": 0 };
-  let currentUser = null;
-  let currentTransfer = null;
+let users = {};
+let currentUser = null;
+let currentUsername = "";
+let currentTransfer = null;
+let totalFees = 0;
+let transactionLogs = [];
 
-  function convertCurrency(amount, from, to) {
-    if (from === to) return amount;
-    return amount * (exchangeRates[from]?.[to] || 1);
-  }
+const currencies = ["USD", "EUR", "KES", "GBP", "BTC", "ETH", "USDT"];
+const countries = ["Kenya", "United States", "Germany", "United Kingdom", "Nigeria", "India", "Brazil"];
 
-  function showSection(id) {
-    document.querySelectorAll("div").forEach(div => div.classList.add("hidden"));
-    document.getElementById(id).classList.remove("hidden");
-  }
+function showSection(id) {
+  document.querySelectorAll("div").forEach(div => div.classList.add("hidden"));
+  document.getElementById(id).classList.remove("hidden");
+}
 
-  function register() {
-    const username = document.getElementById("reg-username").value.trim();
-    const password = document.getElementById("reg-password").value.trim();
-    const email = document.getElementById("reg-email").value.trim();
-    const pin = document.getElementById("reg-pin").value.trim();
-    const country = document.getElementById("country").value;
-    const currency = document.getElementById("currency").value;
-
-    if (!username || !password || !email || !pin || !country || !currency) {
-      alert("All fields are required.");
-      return;
-    }
-
-    if (users[username]) {
-      alert("Username already exists.");
-      return;
-    }
-
-    users[username] = {
-      password, email, pin, country, currency,
-      wallet: "W" + Math.floor(100000 + Math.random() * 900000),
-      balance: 1000, role: "user"
-    };
-
-    alert("Registration successful.");
-    showSection("start-section");
-  }
-
-  function login() {
-    const username = document.getElementById("login-username").value.trim();
-    const password = document.getElementById("login-password").value.trim();
-
-    const user = users[username];
-    if (!user || user.password !== password) {
-      alert("Invalid credentials.");
-      return;
-    }
-
-    currentUser = user;
-    document.getElementById("user-name").textContent = username;
-    document.getElementById("user-wallet").textContent = user.wallet;
-    document.getElementById("user-balance").textContent = user.balance.toFixed(2);
-    document.getElementById("user-currency").textContent = user.currency;
-    showSection("dashboard-section");
-  }
-
-  function prepareTransfer() {
-    const recipientWallet = document.getElementById("recipient").value.trim();
-    const amount = parseFloat(document.getElementById("amount").value);
-    const pin = document.getElementById("auth-pin").value.trim();
-
-    if (!recipientWallet || !amount || !pin) {
-      alert("All fields required.");
-      return;
-    }
-
-    if (pin !== currentUser.pin) {
-      alert("Incorrect PIN.");
-      return;
-    }
-
-    const recipient = Object.values(users).find(u => u.wallet === recipientWallet);
-    if (!recipient) {
-      alert("Recipient not found.");
-      return;
-    }
-
-    const amountInKES = convertCurrency(amount, currentUser.currency, "KES");
-    const chargeKES = amountInKES >= 250 ? Math.min(amountInKES * 0.005, 1000) : 0;
-    const chargeInSenderCurrency = convertCurrency(chargeKES, "KES", currentUser.currency);
-    const totalDebit = amount + chargeInSenderCurrency;
-
-    if (currentUser.balance < totalDebit) {
-      alert("Insufficient funds (including fee).");
-      return;
-    }
-
-    currentTransfer = {
-      recipientWallet, recipient,
-      amount,
-      chargeKES,
-      chargeInSenderCurrency
-    };
-
-    document.getElementById("confirm-recipient").textContent = recipientWallet;
-    document.getElementById("confirm-amount").textContent = amount.toFixed(2) + " " + currentUser.currency;
-    showSection("confirmation-section");
-  }
-
-  function confirmTransfer() {
-    const { recipient, amount, chargeInSenderCurrency, chargeKES } = currentTransfer;
-
-    currentUser.balance -= amount + chargeInSenderCurrency;
-    recipient.balance += convertCurrency(amount, currentUser.currency, recipient.currency);
-    totalCharges["KES"] += chargeKES;
-
-    alert("Transfer successful.");
-    document.getElementById("user-balance").textContent = currentUser.balance.toFixed(2);
-    showSection("dashboard-section");
-  }
-
-  function cancelTransfer() {
-    showSection("dashboard-section");
-  }
-
-  function logout() {
-    currentUser = null;
-    showSection("start-section");
-  }
-
-  function populateDropdowns() {
-    const ctrySelect = document.getElementById("country");
-    const currSelect = document.getElementById("currency");
-
-    countries.forEach(c => {
-      const option = document.createElement("option");
-      option.value = c;
-      option.text = c;
-      ctrySelect.add(option);
+function populateSelects() {
+  const currencySelects = document.querySelectorAll("#currency, #from-currency, #to-currency");
+  const countrySelects = document.querySelectorAll("#country");
+  currencies.forEach(cur => {
+    currencySelects.forEach(sel => {
+      const opt = document.createElement("option");
+      opt.value = cur;
+      opt.text = cur;
+      sel.add(opt);
     });
-
-    currencies.forEach(c => {
-      const option = document.createElement("option");
-      option.value = c;
-      option.text = c;
-      currSelect.add(option);
+  });
+  countries.forEach(cty => {
+    countrySelects.forEach(sel => {
+      const opt = document.createElement("option");
+      opt.value = cty;
+      opt.text = cty;
+      sel.add(opt);
     });
-  }
+  });
+}
 
-  populateDropdowns();
-  showSection("start-section");
-</script>
-</body>
-</html>
+async function fetchRate(from, to) {
+  if (from === to) return 1;
+  try {
+    const res = await fetch(`https://api.exchangerate.host/convert?from
