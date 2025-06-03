@@ -2,122 +2,252 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Multi-Currency Wallet Platform</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Wallet Platform</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    .hidden { display: none; }
-    input, select, button { margin: 5px; padding: 6px; }
-    #confirmation-section { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
-    canvas { max-width: 400px; margin: 10px 0; }
-    #transaction-log { max-height: 150px; overflow-y: scroll; border: 1px solid #ccc; padding: 5px; margin-top: 10px; font-size: 12px; }
-    #admin-panel, #subadmin-panel { border: 1px solid #000; padding: 10px; margin-top: 15px; background: #f9f9f9; }
-    #admin-panel h3, #subadmin-panel h3 { margin-top: 0; }
-    label { font-size: 12px; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f4f4f4;
+    }
+    header {
+      background: #2c3e50;
+      color: white;
+      padding: 10px;
+      text-align: center;
+    }
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .form-group {
+      margin-bottom: 12px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #2980b9;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #3498db;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    table, th, td {
+      border: 1px solid #ddd;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+    }
+    canvas {
+      margin-top: 20px;
+    }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body onload="initApp()">
+<body>
 
-  <h2>Multi-Currency Wallet Platform</h2>
+<header>
+  <h1>Multi-Currency Wallet Platform</h1>
+</header>
 
-  <div id="start-section">
-    <button onclick="showSection('login-section')">Login</button>
-    <button onclick="showSection('register-section')">Register</button>
+<div class="container">
+
+  <div class="card">
+    <h2>User Registration (with KYC)</h2>
+    <div class="form-group">
+      <label for="fullName">Full Name</label>
+      <input type="text" id="fullName" placeholder="Enter your full name">
+    </div>
+    <div class="form-group">
+      <label for="emailReg">Email</label>
+      <input type="email" id="emailReg" placeholder="Enter your email">
+    </div>
+    <div class="form-group">
+      <label for="passwordReg">Password</label>
+      <input type="password" id="passwordReg" placeholder="Enter password">
+    </div>
+    <div class="form-group">
+      <label for="country">Country</label>
+      <select id="country">
+        <option value="">Select Country</option>
+        <option value="KE">Kenya</option>
+        <option value="NG">Nigeria</option>
+        <option value="US">USA</option>
+        <option value="GB">UK</option>
+        <option value="IN">India</option>
+        <!-- Add all countries as needed -->
+      </select>
+    </div>
+    <button onclick="registerUser()">Register</button>
   </div>
 
-  <div id="register-section" class="hidden">
-    <h3>Register</h3>
-    <input id="reg-username" placeholder="Username" />
-    <input id="reg-password" type="password" placeholder="Password" />
-    <label><input type="checkbox" onclick="togglePassword('reg-password')"> Show Password</label><br>
-    <input id="reg-email" placeholder="Email" />
-    <input id="reg-pin" placeholder="PIN (4 digits)" maxlength="4" />
-    <select id="currency"></select><br>
-    <select id="country"></select><br>
-    <button onclick="register()">Register</button>
-    <button onclick="showSection('start-section')">Back</button>
+  <div class="card">
+    <h2>Login</h2>
+    <div class="form-group">
+      <label for="emailLogin">Email</label>
+      <input type="email" id="emailLogin" placeholder="Enter email">
+    </div>
+    <div class="form-group">
+      <label for="passwordLogin">Password</label>
+      <input type="password" id="passwordLogin" placeholder="Enter password">
+    </div>
+    <button onclick="loginUser()">Login</button>
   </div>
 
-  <div id="login-section" class="hidden">
-    <h3>Login</h3>
-    <input id="login-username" placeholder="Username" />
-    <input id="login-password" type="password" placeholder="Password" />
-    <label><input type="checkbox" onclick="togglePassword('login-password')"> Show Password</label><br>
-    <button onclick="login()">Login</button>
-    <button onclick="showSection('start-section')">Back</button>
+  <div class="card">
+    <h2>Wallet Dashboard</h2>
+    <p>User: <span id="loggedInUser">Not logged in</span></p>
+    <div class="form-group">
+      <label for="walletCurrency">Currency</label>
+      <select id="walletCurrency">
+        <option value="KES">KES</option>
+        <option value="USD">USD</option>
+        <option value="EUR">EUR</option>
+        <option value="NGN">NGN</option>
+        <option value="BTC">BTC</option>
+        <option value="ETH">ETH</option>
+        <!-- More currencies -->
+      </select>
+    </div>
+    <button onclick="viewWallet()">View Wallet</button>
+    <div id="walletBalance"></div>
   </div>
 
-  <div id="user-panel" class="hidden">
-    <h3>Welcome, <span id="current-username"></span>!</h3>
-    <p><b>Role:</b> <span id="current-role"></span></p>
-
-    <div id="wallet-balances"></div>
-
-    <h4>Send Money</h4>
-    <select id="send-currency"></select>
-    <input id="send-amount" type="number" placeholder="Amount" min="0" step="0.01" />
-    <input id="send-recipient" placeholder="Recipient Username" />
-    <button onclick="sendMoney()">Send</button>
-
-    <h4>Transaction Log</h4>
-    <div id="transaction-log"></div>
-
-    <button onclick="logout()">Logout</button>
+  <div class="card">
+    <h2>Send Funds</h2>
+    <div class="form-group">
+      <label for="sendTo">Recipient Email</label>
+      <input type="email" id="sendTo" placeholder="Recipient email">
+    </div>
+    <div class="form-group">
+      <label for="sendCurrency">Currency</label>
+      <select id="sendCurrency">
+        <option value="KES">KES</option>
+        <option value="USD">USD</option>
+        <option value="EUR">EUR</option>
+        <option value="NGN">NGN</option>
+        <option value="BTC">BTC</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="sendAmount">Amount</label>
+      <input type="number" id="sendAmount" placeholder="Amount">
+    </div>
+    <button onclick="sendFunds()">Send</button>
   </div>
 
-  <div id="admin-panel" class="hidden">
-    <h3>Admin Panel</h3>
-    <p><b>Transaction Wallet Balances:</b> <span id="admin-transaction-balance"></span></p>
-    <p><b>Trading Wallet Balances:</b> <span id="admin-trading-balance"></span></p>
-
-    <button onclick="moveFeesToTrading()">Move Fees to Trading Wallet</button>
-
-    <h4>Transaction Fees Collected (per currency)</h4>
-    <canvas id="feesChart" width="400" height="200"></canvas>
+  <div class="card">
+    <h2>Transaction History</h2>
+    <div class="form-group">
+      <label for="filterCurrency">Filter by Currency</label>
+      <select id="filterCurrency">
+        <option value="">All</option>
+        <option value="KES">KES</option>
+        <option value="USD">USD</option>
+        <option value="EUR">EUR</option>
+        <option value="NGN">NGN</option>
+        <option value="BTC">BTC</option>
+      </select>
+    </div>
+    <button onclick="filterTransactions()">Filter</button>
+    <button onclick="exportTransactions()">Export</button>
+    <table id="transactionsTable">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Amount</th>
+          <th>Currency</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Transactions go here -->
+      </tbody>
+    </table>
   </div>
 
-  <div id="subadmin-panel" class="hidden">
-    <h3>Sub-Admin Panel</h3>
-    <p><b>Transaction Wallet Balances:</b> <span id="subadmin-transaction-balance"></span></p>
-    <p><b>Trading Wallet Balances:</b> <span id="subadmin-trading-balance"></span></p>
+  <div class="card">
+    <h2>Performance Chart</h2>
+    <canvas id="transactionChart" width="400" height="200"></canvas>
   </div>
 
-  <script>
-    const countries = ["Kenya", "Uganda", "USA", "UK", "Germany"];
-    const currencies = ["KES", "UGX", "USD", "GBP", "EUR"];
+</div>
 
-    const exchangeRates = {
-      "KES": 1,
-      "USD": 0.0085,
-      "EUR": 0.0078,
-      "UGX": 34.5,
-      "GBP": 0.0067
-    };
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  function registerUser() {
+    alert("Registration logic will go here.");
+  }
 
-    const users = {};
-    const transactions = [];
-    const adminWallets = {
-      transactionWallet: { KES: 0, USD: 0, EUR: 0, UGX: 0, GBP: 0 },
-      tradingWallet: { KES: 0, USD: 0, EUR: 0, UGX: 0, GBP: 0 }
-    };
+  function loginUser() {
+    const email = document.getElementById("emailLogin").value;
+    document.getElementById("loggedInUser").textContent = email;
+    alert("Logged in as " + email);
+  }
 
-    let currentUser = null;
+  function viewWallet() {
+    const currency = document.getElementById("walletCurrency").value;
+    document.getElementById("walletBalance").textContent = "Balance in " + currency + ": 1,000";
+  }
 
-    function initApp() {
-      showSection('start-section');
-      populateCurrencies();
-      populateCountries();
-      fetchExchangeRates();
+  function sendFunds() {
+    alert("Send funds logic will go here.");
+  }
+
+  function filterTransactions() {
+    alert("Filtering transactions...");
+  }
+
+  function exportTransactions() {
+    alert("Exporting transactions...");
+  }
+
+  const ctx = document.getElementById("transactionChart").getContext("2d");
+  const chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ["KES", "USD", "EUR", "NGN", "BTC"],
+      datasets: [{
+        label: 'Transactions',
+        data: [12, 19, 3, 5, 2],
+        backgroundColor: ['#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#e74c3c']
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
     }
+  });
+</script>
 
-    function togglePassword(fieldId) {
-      const field = document.getElementById(fieldId);
-      field.type = field.type === "password" ? "text" : "password";
-    }
-
-    function populateCurrencies() {
-      const currencySelects = document.querySelectorAll("#currency, #send-currency");
-      currencySelects.forEach(select => {
-        select.innerHTML = "";
-        currencies.forEach(c => {
-          const option = document.createEl
+</body>
+</html>
