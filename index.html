@@ -8,7 +8,6 @@
     body { font-family: Arial, sans-serif; margin: 20px; background-color: #f9f9f9; }
     .hidden { display: none; }
     input, select, button { margin: 5px; padding: 6px; width: 200px; }
-    #confirmation-section { border: 1px solid #ccc; padding: 10px; margin-top: 10px; background: #fff; }
     canvas { max-width: 500px; margin: 10px; background: #fff; }
     h2, h3, h4 { color: #333; }
     button { background-color: #4CAF50; color: white; border: none; cursor: pointer; }
@@ -19,6 +18,8 @@
 <body>
 
 <h2>Global Wallet Platform</h2>
+
+<!-- Start Section -->
 <div id="start-section">
   <button onclick="showSection('login-section')">Login</button>
   <button onclick="showSection('register-section')">Register</button>
@@ -41,7 +42,7 @@
 <div id="login-section" class="hidden">
   <h3>Login</h3>
   <input id="login-username" placeholder="Username" />
-  <input id="login-password" type="password" placeholder="Password" />
+  <input id="login-password" type="password" />
   <button onclick="login()">Login</button>
   <button onclick="showSection('start-section')">Back</button>
 </div>
@@ -77,7 +78,6 @@
 let users = {};
 let currentUser = null;
 let currentUsername = "";
-let currentTransfer = null;
 let totalFees = 0;
 let transactionLogs = [];
 
@@ -92,6 +92,7 @@ function showSection(id) {
 function populateSelects() {
   const currencySelects = document.querySelectorAll("#currency, #from-currency, #to-currency");
   const countrySelects = document.querySelectorAll("#country");
+
   currencies.forEach(cur => {
     currencySelects.forEach(sel => {
       const opt = document.createElement("option");
@@ -100,17 +101,5 @@ function populateSelects() {
       sel.add(opt);
     });
   });
-  countries.forEach(cty => {
-    countrySelects.forEach(sel => {
-      const opt = document.createElement("option");
-      opt.value = cty;
-      opt.text = cty;
-      sel.add(opt);
-    });
-  });
-}
 
-async function fetchRate(from, to) {
-  if (from === to) return 1;
-  try {
-    const res = await fetch(`https://api.exchangerate.host/convert?from
+  countries.forEach(cty => {
