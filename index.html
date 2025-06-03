@@ -231,13 +231,87 @@
   }
 
   // Transfer money logic with fees and currency conversion
-  function sendMoney() {
-    if (!currentUser) return alert("Login required");
+function sendMoney() {
+  if (!currentUser) return alert("Login required");
 
-    const fromCurrency = document.getElementById("send-currency").value;
-    let amount = parseFloat(document.getElementById("send-amount").value);
-    const recipientName = document.getElementById("send-recipient").value.trim();
+  const fromCurrency = document.getElementById("send-currency").value;
+  let amount = parseFloat(document.getElementById("send-amount").value);
+  const recipientName = document.getElementById("send-recipient").value.trim();
 
+  if (!fromCurrency || isNaN(amount) || amount <= 0 || !recipientName) {
+    alert("Please fill all fields correctly.");
+    return;
+  }
 
-::contentReference[oaicite:15]{index=15}
+  if (!users[recipientName]) {
+    alert("Recipient does not exist.");
+    return;
+  }
+
+  if (recipientName === currentUser.username) {
+    alert("You cannot send money to yourself.");
+    return;
+  }
+
+  if (currentUser.wallet[fromCurrency] < amount) {
+    alert("Insufficient balance.");
+    return;
+  }
+
+  // Apply transaction fee logic
+  let feeKES = 0;
+  const amountInKES = amount / exchangeRates[fromCurrency];
+
+  if (amountInKES >= 250) {
+    feeKES = Math.min(amountInKES * 0.005, 1000); // 0.5% fee, max KES 1000
+  }
+
+  const feeInCurrency = feeKES * exchangeRates[fromCurrency]; // convert fee back to original currency
+
+  const finalAmount = amount - feeInCurrency;
+
+  if (finalAmount <= 0) {
+    alert("Amount too low after applying fees.");
+    return;
+  }
+
+  // Convert to recipient's preferred currency
+  const recipient = users[recipientName];
+  const convertedAmount = finalAmount / exchangeRates[fromCurrency] * exchangeRates[recipient.currency];
+
+  // Perform transaction
+  currentUser.wallet[fromCurrency] -= amount;
+  recipient.wallet[recipient.currency] += convertedAmount;
+
+  // Route fee to admin’s transaction wallet in EUR
+  const feeInKES = feeKES;
+  const feeInEUR = feeInKES * exchangeRates["EUR"];
+  adminWallets.transactionWallet["EUR"] += feeInEUR;
+
+  // Log transaction
+  const logEntry = {
+    timestamp: new Date().toLocaleString(),
+    sender: currentUser.username,
+    recipient: recipientName,
+    fromCurrency,
+    fromAmount: amount.toFixed(2),
+    toCurrency: recipient.currency,
+    toAmount: convertedAmount.toFixed(2),
+    feeKES: feeInKES.toFixed(2),
+    feeEUR: feeInEUR.toFixed(2)
+  };
+  transactions.push(logEntry);
+
+  updateUserWalletDisplay();
+  updateTransactionLog();
+  alert("Transaction successful.");
+}
+function updateTransactionLog() {
+  const logDiv = document.getElementById("transaction-log");
+  logDiv.innerHTML = transactions
+    .slice().reverse()
+    .map(t => `${t.timestamp} - ${t.sender} ➡️ ${t.recipient} | ${t.fromAmount} ${t.fromCurrency} ➝ ${t.toAmount} ${t.toCurrency} | Fee: €${t.feeEUR}`)
+    .join("<br>");
+}
+
  
