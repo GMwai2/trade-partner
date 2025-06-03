@@ -7,19 +7,28 @@
 <style>
   body { font-family: Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 0; }
   header { background: #003366; color: white; padding: 1rem; text-align: center; }
-  main { max-width: 800px; margin: 1rem auto; background: white; padding: 1rem; border-radius: 5px; box-shadow: 0 0 10px #aaa; }
-  input, select, button { padding: 0.5rem; margin: 0.3rem 0; width: 100%; box-sizing: border-box; }
-  button { background: #003366; color: white; border: none; cursor: pointer; }
+  main { max-width: 900px; margin: 1rem auto; background: white; padding: 1rem 2rem; border-radius: 5px; box-shadow: 0 0 12px #aaa; }
+  input, select, button { padding: 0.5rem; margin: 0.4rem 0; width: 100%; box-sizing: border-box; font-size: 1rem; }
+  button { background: #003366; color: white; border: none; cursor: pointer; border-radius: 3px; }
   button:disabled { background: #aaa; cursor: not-allowed; }
-  label { font-weight: bold; }
+  label { font-weight: bold; display: block; margin-top: 0.8rem; }
   .hidden { display: none; }
   .wallet-info { margin-bottom: 1rem; }
+  .error { color: red; margin-top: 0.2rem; }
   .popup-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
   }
   .popup {
-    background: white; padding: 1rem; border-radius: 5px; width: 300px;
+    background: white; padding: 1.5rem; border-radius: 6px; width: 350px; box-shadow: 0 0 15px #333;
+  }
+  .popup h3 { margin-top: 0; }
+  .transaction-log {
+    max-height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 0.5rem; font-size: 0.9rem; background: #fafafa; margin-top: 1rem;
+  }
+  .transaction-log div {
+    border-bottom: 1px solid #ccc; padding: 0.3rem 0;
   }
 </style>
 </head>
@@ -30,23 +39,23 @@
 <main>
   <section id="login-section">
     <h2>Login</h2>
-    <label for="login-account">Account Number</label>
+    <label for="login-account">Account Name</label>
     <input type="text" id="login-account" autocomplete="off" />
     <label for="login-pin">PIN</label>
     <input type="password" id="login-pin" autocomplete="off" />
     <button id="login-btn">Login</button>
-    <p id="login-error" style="color:red;"></p>
+    <p id="login-error" class="error"></p>
   </section>
 
   <section id="wallet-section" class="hidden">
     <div class="wallet-info">
       <p><strong>Account:</strong> <span id="user-account"></span></p>
-      <p><strong>Balance (USD):</strong> $<span id="user-balance">0.00</span></p>
-      <p><strong>Currency:</strong> <span id="user-currency">USD</span></p>
+      <p><strong>Balance:</strong> <span id="user-balance">0.00</span> <span id="user-currency"></span></p>
+      <p><strong>Wallet Type:</strong> <span id="wallet-type"></span></p>
     </div>
 
     <h3>Transfer Funds</h3>
-    <label for="transfer-account">Recipient Account Number</label>
+    <label for="transfer-account">Recipient Account Name</label>
     <input type="text" id="transfer-account" autocomplete="off" />
     
     <label for="transfer-amount">Amount</label>
@@ -54,20 +63,24 @@
     
     <label for="transfer-currency">Currency</label>
     <select id="transfer-currency">
-      <option value="USD">USD</option>
       <option value="KES">KES</option>
+      <option value="JPY">JPY</option>
+      <option value="USD">USD</option>
       <option value="EUR">EUR</option>
     </select>
     
     <button id="transfer-btn" disabled>Initiate Transfer</button>
 
     <button id="logout-btn" style="margin-top: 1rem; background: #b22222;">Logout</button>
+
+    <h3>Transaction Log</h3>
+    <div id="transaction-log" class="transaction-log"></div>
   </section>
 
   <!-- Confirmation Popup -->
-  <div id="confirm-popup" class="popup-overlay hidden">
+  <div id="confirm-popup" class="popup-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="popup-title">
     <div class="popup">
-      <h3>Confirm Transfer Details</h3>
+      <h3 id="popup-title">Confirm Transfer Details</h3>
       <p><strong>From:</strong> <span id="confirm-from"></span></p>
       <p><strong>To:</strong> <span id="confirm-to"></span></p>
       <p><strong>Amount:</strong> <span id="confirm-amount"></span></p>
@@ -75,35 +88,39 @@
 
       <label for="confirm-pin">Enter PIN to Authorize</label>
       <input type="password" id="confirm-pin" autocomplete="off" />
-      <p id="confirm-error" style="color:red;"></p>
+      <p id="confirm-error" class="error"></p>
       
       <button id="confirm-btn">Confirm Transfer</button>
-      <button id="cancel-btn" style="background:#aaa; color:#000;">Cancel</button>
+      <button id="cancel-btn" style="background:#aaa; color:#000; margin-left: 0.5rem;">Cancel</button>
     </div>
   </div>
 </main>
 
 <script>
-// Basic simulated database in localStorage
+// === Constants & Config ===
 const USERS_KEY = 'tradePartnerUsers';
 const TRANSACTION_FEES_PERCENT = 0.005; // 0.5%
-const TRANSACTION_FEES_MIN_AMOUNT = 250; // KES equivalent
-const TRANSACTION_FEES_MAX = 1000; // max fee KES
-const EXCHANGE_RATES = { // USD base for simplicity; KES and EUR are rough values
+const TRANSACTION_FEES_MIN_AMOUNT_KES = 250;
+const TRANSACTION_FEES_MAX_KES = 1000;
+
+// Exchange rates relative to USD base for demo (static)
+const EXCHANGE_RATES = {
   USD: 1,
-  KES: 0.0075, // 1 KES = 0.0075 USD
+  KES: 0.0075,
   EUR: 1.1,
+  JPY: 0.0070,
 };
 
-// Initialize demo users if not present
+// === Users data initialization (with balances & PINs) ===
 function initializeUsers() {
   if (!localStorage.getItem(USERS_KEY)) {
-    const demoUsers = {
-      'user123': { pin: '1234', balance: 1000, currency: 'USD' },
-      'user456': { pin: '4567', balance: 200000, currency: 'KES' },
-      'admin': { pin: '0000', balance: 5000, currency: 'EUR', isAdmin: true, feesWallet: 0 },
+    const users = {
+      'Kiluch': { pin: '1111', balance: 150000, currency: 'KES' },     // KES balance
+      'Moses': { pin: '2222', balance: 2000000, currency: 'JPY' },      // JPY balance
+      'Schwadz': { pin: '3333', balance: 1200, currency: 'USD' },       // USD balance
+      'Admin': { pin: '0000', balance: 3000, currency: 'EUR', isAdmin: true, feesWallet: 0 }, // EUR + fees wallet
     };
-    localStorage.setItem(USERS_KEY, JSON.stringify(demoUsers));
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
   }
 }
 
@@ -115,23 +132,29 @@ function saveUsers(users) {
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
 }
 
+// === Globals ===
 let currentUser = null;
+let transactionLog = [];
 
+// === UI Elements ===
 const loginSection = document.getElementById('login-section');
 const walletSection = document.getElementById('wallet-section');
 const loginAccountInput = document.getElementById('login-account');
 const loginPinInput = document.getElementById('login-pin');
 const loginBtn = document.getElementById('login-btn');
 const loginError = document.getElementById('login-error');
+
 const userAccountDisplay = document.getElementById('user-account');
 const userBalanceDisplay = document.getElementById('user-balance');
 const userCurrencyDisplay = document.getElementById('user-currency');
-const logoutBtn = document.getElementById('logout-btn');
+const walletTypeDisplay = document.getElementById('wallet-type');
 
 const transferAccountInput = document.getElementById('transfer-account');
 const transferAmountInput = document.getElementById('transfer-amount');
 const transferCurrencySelect = document.getElementById('transfer-currency');
 const transferBtn = document.getElementById('transfer-btn');
+
+const logoutBtn = document.getElementById('logout-btn');
 
 const confirmPopup = document.getElementById('confirm-popup');
 const confirmFrom = document.getElementById('confirm-from');
@@ -143,7 +166,11 @@ const confirmBtn = document.getElementById('confirm-btn');
 const cancelBtn = document.getElementById('cancel-btn');
 const confirmError = document.getElementById('confirm-error');
 
+const transactionLogContainer = document.getElementById('transaction-log');
+
+// === Initialization ===
 initializeUsers();
+renderTransactionLog();
 
 function login(account, pin) {
   const users = getUsers();
@@ -162,8 +189,14 @@ function showWallet() {
   userAccountDisplay.textContent = currentUser.account;
   userBalanceDisplay.textContent = currentUser.balance.toFixed(2);
   userCurrencyDisplay.textContent = currentUser.currency;
-  transferBtn.disabled = true;
+  walletTypeDisplay.textContent = currentUser.isAdmin ? 'Admin Wallet' : 'User Wallet';
+
+  // Set transfer currency default to user currency
+  transferCurrencySelect.value = currentUser.currency;
+
+  // Clear inputs & disable transfer button
   clearTransferInputs();
+  transferBtn.disabled = true;
 }
 
 function logout() {
@@ -173,12 +206,14 @@ function logout() {
   loginAccountInput.value = '';
   loginPinInput.value = '';
   loginError.textContent = '';
+  clearTransferInputs();
 }
 
 function clearTransferInputs() {
   transferAccountInput.value = '';
   transferAmountInput.value = '';
-  transferCurrencySelect.value = currentUser.currency;
+  transferCurrencySelect.value = currentUser ? currentUser.currency : 'KES';
+  transferBtn.disabled = true;
 }
 
 function isValidTransferInput() {
@@ -189,19 +224,20 @@ function isValidTransferInput() {
   );
 }
 
+function enableTransferButton() {
+  transferBtn.disabled = !isValidTransferInput();
+}
+
 function convertCurrency(amount, fromCurrency, toCurrency) {
+  if(fromCurrency === toCurrency) return amount;
   const amountInUSD = amount * EXCHANGE_RATES[fromCurrency];
   return amountInUSD / EXCHANGE_RATES[toCurrency];
 }
 
 function calculateFee(amountInKES) {
-  if (amountInKES < TRANSACTION_FEES_MIN_AMOUNT) return 0;
+  if (amountInKES < TRANSACTION_FEES_MIN_AMOUNT_KES) return 0;
   const fee = amountInKES * TRANSACTION_FEES_PERCENT;
-  return fee > TRANSACTION_FEES_MAX ? TRANSACTION_FEES_MAX : fee;
-}
-
-function enableTransferButton() {
-  transferBtn.disabled = !isValidTransferInput();
+  return fee > TRANSACTION_FEES_MAX_KES ? TRANSACTION_FEES_MAX_KES : fee;
 }
 
 function openConfirmationPopup() {
@@ -212,10 +248,31 @@ function openConfirmationPopup() {
   confirmPinInput.value = '';
   confirmError.textContent = '';
   confirmPopup.classList.remove('hidden');
+  confirmPinInput.focus();
 }
 
 function closeConfirmationPopup() {
   confirmPopup.classList.add('hidden');
+  confirmError.textContent = '';
+}
+
+function addTransactionLog(entry) {
+  transactionLog.unshift(entry);
+  if (transactionLog.length > 20) transactionLog.pop();
+  renderTransactionLog();
+}
+
+function renderTransactionLog() {
+  transactionLogContainer.innerHTML = '';
+  if (transactionLog.length === 0) {
+    transactionLogContainer.innerHTML = '<i>No transactions yet.</i>';
+    return;
+  }
+  transactionLog.forEach(log => {
+    const div = document.createElement('div');
+    div.textContent = `[${log.date}] ${log.from} → ${log.to} : ${log.amount.toFixed(2)} ${log.currency} (Fee: ${log.fee.toFixed(2)} ${log.currency})`;
+    transactionLogContainer.appendChild(div);
+  });
 }
 
 function performTransfer() {
@@ -231,74 +288,4 @@ function performTransfer() {
   const users = getUsers();
 
   if (!users[recipientAccount]) {
-    confirmError.textContent = "Recipient account not found.";
-    return;
-  }
-
-  const feeKES = calculateFee(convertCurrency(amount, currency, 'KES'));
-  const feeUSD = convertCurrency(feeKES, 'KES', 'USD');
-
-  // Convert transfer amount to user's currency for balance check
-  const amountInUserCurrency = convertCurrency(amount, currency, currentUser.currency);
-
-  if (currentUser.balance < amountInUserCurrency + feeUSD) {
-    confirmError.textContent = "Insufficient balance including fees.";
-    return;
-  }
-
-  // Validate PIN entered in confirmation popup
-  if (confirmPinInput.value !== currentUser.pin) {
-    confirmError.textContent = "Invalid PIN.";
-    return;
-  }
-
-  // Deduct from sender
-  users[currentUser.account].balance -= amountInUserCurrency + feeUSD;
-
-  // Credit recipient in their currency converted from transfer currency
-  const amountInRecipientCurrency = convertCurrency(amount, currency, users[recipientAccount].currency);
-  users[recipientAccount].balance += amountInRecipientCurrency;
-
-  // Credit fee to admin's fees wallet (converted to EUR)
-  const feeInEUR = convertCurrency(feeKES, 'KES', 'EUR');
-  users['admin'].feesWallet = (users['admin'].feesWallet || 0) + feeInEUR;
-
-  saveUsers(users);
-
-  // Update currentUser balance in-memory and UI
-  currentUser.balance = users[currentUser.account].balance;
-  userBalanceDisplay.textContent = currentUser.balance.toFixed(2);
-
-  alert(`Transfer successful. Fees applied: KES ${feeKES.toFixed(2)} (converted)`);
-
-  closeConfirmationPopup();
-  clearTransferInputs();
-  transferBtn.disabled = true;
-}
-
-loginBtn.addEventListener('click', () => {
-  login(loginAccountInput.value.trim(), loginPinInput.value.trim());
-});
-
-logoutBtn.addEventListener('click', () => {
-  logout();
-});
-
-transferAccountInput.addEventListener('input', enableTransferButton);
-transferAmountInput.addEventListener('input', enableTransferButton);
-transferCurrencySelect.addEventListener('change', enableTransferButton);
-
-transferBtn.addEventListener('click', () => {
-  openConfirmationPopup();
-});
-
-cancelBtn.addEventListener('click', () => {
-  closeConfirmationPopup();
-});
-
-confirmBtn.addEventListener('click', () => {
-  performTransfer();
-});
-</script>
-</body>
-</html>
+    confirmError.textContent
